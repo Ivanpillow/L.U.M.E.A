@@ -1,0 +1,58 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>Proving Grounds</title>
+    <meta name="description" content="Find where — and when — Earth can rehearse NASA's Moon Base and Mars. Gap-driven planetary analog discovery with NASA open data." />
+    <link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 32 32'%3E%3Ccircle cx='16' cy='16' r='14' fill='%23fe9f6d'/%3E%3Ccircle cx='21' cy='12' r='9' fill='%2305070d'/%3E%3C/svg%3E" />
+  </head>
+  <body>
+    <div id="app">
+      <aside id="panel" aria-label="Controls">
+        <header class="brand">
+          <h1>Proving Grounds</h1>
+          <p class="tagline">Where — and <em>when</em> — Earth can rehearse NASA's Moon Base and Mars.</p>
+        </header>
+
+        <section>
+          <div id="targets" class="seg" role="tablist" aria-label="Target"></div>
+          <div id="target-info" class="target-info"></div>
+        </section>
+
+        <section>
+          <h2>Test profile <span class="hint">from NASA's Moon Base gaps</span></h2>
+          <div id="profiles" class="profiles"></div>
+        </section>
+
+        <section>
+          <h2>Analog calendar <span class="hint">same place, different month</span></h2>
+          <div id="months" class="months" role="group" aria-label="Month"></div>
+          <p id="month-note" class="note"></p>
+        </section>
+
+        <section>
+          <h2>Criteria &amp; weights <button id="reset" class="link">reset</button></h2>
+          <div id="weights" class="weights"></div>
+        </section>
+
+        <section>
+          <h2>Top candidates <span class="hint" id="cand-hint"></span></h2>
+          <ol id="cands" class="cands"></ol>
+        </section>
+
+        <footer class="panel-foot">
+          <button id="btn-method" class="btn">Method, limits &amp; sources</button>
+          <p class="note">Data: NASA POWER (MERRA-2/CERES 2001–2025) · SRTM-based terrain · NASA GIBS · Artemis &amp; Moon Base documents.</p>
+        </footer>
+      </aside>
+
+      <main id="map" aria-label="Analog score globe"></main>
+      <div id="legend" class="legend" aria-hidden="true"></div>
+      <article id="card" class="card" hidden aria-live="polite"></article>
+      <dialog id="method" class="method"></dialog>
+      <div id="loading" class="loading">Loading NASA data…</div>
+    </div>
+    <script type="module" src="/src/main.ts"></script>
+  </body>
+</html>

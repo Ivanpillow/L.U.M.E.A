@@ -1,0 +1,16 @@
+{
+  "name": "haughton_test",
+  "lat": 75.38,
+  "lon": -89.68,
+  "radius_km": 10.0,
+  "pixel_m": 9.6,
+  "land_fraction": 1.0,
+  "relief_m": 311.2,
+  "slope100_p50_deg": 3.91,
+  "slope100_p90_deg": 11.55,
+  "pct_area_landing_ok_lt10deg_100m": 86.7,
+  "slope2km_p90_deg": 1.7,
+  "pct_area_eva_ok_lt20deg_2km": 100.0,
+  "source": "AWS Terrain Tiles z12 (SRTM/GMTED/ETOPO mix; verify footprint)",
+  "nasa_requirements": "NTRS 20250009323: landing slope <10 deg over 100 m; EVA <20 deg over 2 km"
+}

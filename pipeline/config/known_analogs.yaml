@@ -1,0 +1,34 @@
+# Análogos terrestres YA conocidos: línea base para la validación (recall) y la novedad.
+# ATENCIÓN: coordenadas APROXIMADAS (±0.2°), escritas de memoria técnica.
+# Tarea T3: reemplazar/validar con la capa USGS "Known Terrestrial Analog Sites for
+# Planetary Science" (Hunter 2020, doi:10.5066/P9J72921), que hay que descargar a
+# mano desde ScienceBase (tiene un desafío anti-bot).
+# body: moon | mars | both ; use: etiquetas libres para la UI
+# validates: perfiles cuya validación usa este sitio como POSITIVO, según su uso documentado
+#   (p. ej. HMP/Devon y AMASE/Svalbard son campañas polares; D-RATS y PISCES probaron regolito y rovers).
+#   Los análogos lunares de la era Apolo (Arizona) son ecuatoriales: NO validan los perfiles polares.
+verified: false
+sites:
+  - {name: "Haughton impact structure, Devon Island", country: CA, lat: 75.38, lon: -89.68, body: both, use: "NASA Haughton-Mars Project", validates: [moon_lowsun_nav, moon_polar_mobility, moon_volatiles, moon_night_survival, mars_ice_landing]}
+  - {name: "Axel Heiberg Island (Expedition Fiord)", country: CA, lat: 79.40, lon: -90.80, body: mars, use: "Cold springs, permafrost", validates: [moon_volatiles, moon_night_survival, mars_ice_landing]}
+  - {name: "McMurdo Dry Valleys", country: AQ, lat: -77.50, lon: 161.80, body: mars, use: "Cold desert, permafrost", validates: [moon_lowsun_nav, moon_night_survival, moon_volatiles, moon_polar_mobility, mars_ice_landing]}
+  - {name: "Atacama Desert (Yungay)", country: CL, lat: -24.08, lon: -69.92, body: mars, use: "Hyper-arid soils, rover tests", validates: [moon_dust_regolith]}
+  - {name: "Death Valley", country: US, lat: 36.50, lon: -117.00, body: mars, use: "Arid geology, named in the challenge", validates: [moon_dust_regolith]}
+  - {name: "Mars Desert Research Station", country: US, lat: 38.41, lon: -110.79, body: mars, use: "Habitat simulations"}
+  - {name: "Black Point Lava Flow (D-RATS)", country: US, lat: 35.68, lon: -111.47, body: moon, use: "NASA Desert RATS", validates: [moon_dust_regolith]}
+  - {name: "Cinder Lake crater field", country: US, lat: 35.30, lon: -111.50, body: moon, use: "Apollo training"}
+  - {name: "Meteor Crater", country: US, lat: 35.03, lon: -111.02, body: moon, use: "Impact geology training"}
+  - {name: "Craters of the Moon (BASALT/FINESSE)", country: US, lat: 43.42, lon: -113.52, body: both, use: "Volcanic EVA research"}
+  - {name: "Mauna Kea (PISCES ISRU tests)", country: US, lat: 19.82, lon: -155.47, body: moon, use: "ISRU field tests", validates: [moon_dust_regolith]}
+  - {name: "Mauna Loa (HI-SEAS)", country: US, lat: 19.60, lon: -155.50, body: both, use: "Habitat simulations"}
+  - {name: "Pavilion Lake (PLRP)", country: CA, lat: 50.87, lon: -121.74, body: mars, use: "Microbialites, exploration ops"}
+  - {name: "Sudbury impact structure", country: CA, lat: 46.60, lon: -81.18, body: moon, use: "Apollo-era impact training"}
+  - {name: "El Pinacate", country: MX, lat: 31.77, lon: -113.50, body: moon, use: "Apollo training (volcanic field)"}
+  - {name: "Rio Tinto", country: ES, lat: 37.70, lon: -6.60, body: mars, use: "Acidic, iron-rich chemistry"}
+  - {name: "Lanzarote (ESA PANGAEA)", country: ES, lat: 29.00, lon: -13.60, body: both, use: "Astronaut geology training"}
+  - {name: "Ries crater (ESA PANGAEA)", country: DE, lat: 48.88, lon: 10.56, body: moon, use: "Impact geology training"}
+  - {name: "Iceland (Holuhraun)", country: IS, lat: 64.85, lon: -16.80, body: both, use: "Basaltic volcanism, rover tests"}
+  - {name: "Svalbard (AMASE, Bockfjorden)", country: NO, lat: 79.40, lon: 13.30, body: mars, use: "Arctic Mars analog expeditions", validates: [moon_lowsun_nav, moon_polar_mobility, moon_volatiles, mars_ice_landing]}
+  - {name: "Pilbara (Dresser Formation)", country: AU, lat: -21.20, lon: 119.40, body: mars, use: "Early-life biosignatures"}
+  - {name: "Arkaroola", country: AU, lat: -30.30, lon: 139.30, body: mars, use: "Mars analog research station"}
+  - {name: "Qaidam Basin", country: CN, lat: 37.50, lon: 93.00, body: mars, use: "Hyper-arid salts (literature analog)"}

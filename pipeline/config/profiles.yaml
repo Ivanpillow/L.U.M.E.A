@@ -1,0 +1,184 @@
+# Perfiles de prueba guiados por las brechas de la fase 1 de la Moon Base (NASA, 2026)
+# y por la selección de sitios humanos en Marte (SWIM).
+#
+# Cada parámetro:
+#   feature: nombre de la feature por celda (ver build_web_data.py)
+#   fn/args: ramp_up [lo,hi] | ramp_down [lo,hi] | band [a,b,c,d]
+#            los args pueden ser números o percentiles terrestres "pXX" (se resuelven
+#            sobre las celdas de tierra; en features mensuales, sobre celdas x meses)
+#   comparability: D (directa) | R (extremo relativo / percentil) — ver doc 04
+#   gate: true => multiplica el score (condición necesaria), no lleva peso
+#   verified: false => el umbral aún no tiene fuente primaria (se muestra en la UI)
+#
+# El texto visible (label, why, breaks) va en INGLÉS (regla de Space Apps).
+
+sources:
+  moonbase: {title: "NASA (2026) Moon Base User's Guide: Architecture Resources, NP-2026-04-6806-HQ", url: "https://www.nasa.gov/wp-content/uploads/2026/04/moon-base-architecture-users-guide.pdf"}
+  artemis_req: {title: "NASA (2025) Artemis Overview, Int'l Space Apps Challenge, NTRS 20250009323 (Key Landing Requirements)", url: "https://ntrs.nasa.gov/api/citations/20250009323/downloads/ArtemisOverview2025IntSPAPPSChallenge.pdf"}
+  tilt: {title: "NASA Science: South Pole Illumination Map (lunar spin axis 1.54°)", url: "https://science.nasa.gov/photojournal/south-pole-illumination-map/"}
+  regions: {title: "NASA Release 24-136 (2024) nine candidate South Pole landing regions", url: "https://www.nasa.gov/news-release/nasa-provides-update-on-artemis-iii-moon-landing-regions/"}
+  nssdc_moon: {title: "NASA NSSDC Moon Fact Sheet", url: "https://nssdc.gsfc.nasa.gov/planetary/factsheet/moonfact.html"}
+  nssdc_mars: {title: "NASA NSSDC Mars Fact Sheet", url: "https://nssdc.gsfc.nasa.gov/planetary/factsheet/marsfact.html"}
+  swim: {title: "Morgan et al. (2021) Nature Astronomy, doi:10.1038/s41550-020-01290-z (SWIM)", url: "https://doi.org/10.1038/s41550-020-01290-z"}
+  power: {title: "NASA POWER Climatology API v2.10.1 (MERRA-2/CERES, 2001-2025)", url: "https://power.larc.nasa.gov/docs/"}
+  terrain: {title: "AWS Terrain Tiles (SRTM/GMTED2010/ETOPO1), Terrarium encoding", url: "https://registry.opendata.aws/terrain-tiles/"}
+  usgs_desert: {title: "USGS, What Is a Desert? (Meigs 1953: arid < 250 mm/yr, semiarid 250–500 mm/yr)", url: "https://pubs.usgs.gov/gip/deserts/what/"}
+  sitesel: {title: "George et al. (2026) Artemis III Site Selection Update, LPSC, NTRS 20250011660", url: "https://ntrs.nasa.gov/citations/20250011660"}
+
+targets:
+  moon_south_pole:
+    name: "NASA Moon Base — lunar South Pole region"
+    body: moon
+    summary: "NASA will build a Moon Base in the lunar South Pole region (Ignition, Mar 24 2026). First crewed landing: Artemis IV (2028). Nine candidate regions (Oct 2024) lie within 6° of the pole."
+    facts:
+      - {k: "Location", v: "≤ 6° latitude from the South Pole", src: artemis_req}
+      - {k: "Max Sun elevation", v: "≈ 7.5° (6° + 1.54° spin-axis tilt)", src: tilt}
+      - {k: "Landing slope limit", v: "< 10° over 100 m", src: artemis_req}
+      - {k: "EVA slope limit", v: "< 20° over 2 km", src: artemis_req}
+      - {k: "Gravity", v: "1.62 m/s² (0.165 g)", src: nssdc_moon}
+      - {k: "Bond albedo", v: "0.11", src: nssdc_moon}
+    never_analog:
+      - {k: "Gravity", v: "0.165 g — Earth cannot reproduce it outdoors", src: nssdc_moon}
+      - {k: "Vacuum", v: "~3×10⁻¹⁵ bar at night; no air to scatter light, so shadows are pitch-black", src: nssdc_moon}
+      - {k: "Radiation", v: "No magnetosphere or atmosphere shielding", src: moonbase}
+      - {k: "Dust", v: "Lunar dust is abrasive and electrostatic (clings to hardware)", src: moonbase}
+      - {k: "Cold traps", v: "Permanently shadowed regions are far colder than any Earth surface", src: moonbase}
+  mars_ice_zones:
+    name: "Mars human landing zones with shallow ice (SWIM)"
+    body: mars
+    summary: "SWIM maps where buried ice is most likely in the northern mid-latitudes; Arcadia Planitia and Deuteronilus Mensae stand out. NASA plans robotic helicopters (SR-1 Freedom) to scout human landing regions."
+    facts:
+      - {k: "Best SWIM regions", v: "Arcadia Planitia, Deuteronilus Mensae", src: swim}
+      - {k: "Mean temperature", v: "~214 K (−59 °C)", src: nssdc_mars}
+      - {k: "Surface pressure", v: "6.36 mb (4.0–8.7 seasonal)", src: nssdc_mars}
+      - {k: "Bond albedo", v: "0.25", src: nssdc_mars}
+      - {k: "Gravity", v: "3.73 m/s² (0.38 g)", src: nssdc_mars}
+    never_analog:
+      - {k: "Gravity", v: "0.38 g", src: nssdc_mars}
+      - {k: "Atmosphere", v: "~6 mb CO₂ — about 0.6% of Earth's sea-level pressure", src: nssdc_mars}
+      - {k: "Temperature", v: "Mean −59 °C; Earth analogs are only relatively extreme", src: nssdc_mars}
+      - {k: "Radiation", v: "No global magnetic field; thin atmosphere", src: nssdc_mars}
+
+profiles:
+  - id: moon_lowsun_nav
+    target: moon_south_pole
+    label: "Low-sun navigation & precision landing"
+    nasa_gap: "Precision landing & hazard avoidance over low-visibility terrain, including in shadow"
+    gap_src: moonbase
+    analog_threshold: 0.6
+    params:
+      - {id: lowsun, feature: lowsun_days, fn: ramp_up, args: [3, 20], gate: true, comparability: D, dimension: "Illumination",
+         label: "Grazing-sun days (noon Sun ≤ 7.5°)", unit: "days/month", src: tilt, verified: true,
+         why: "At the lunar South Pole the Sun never rises above ~7.5°, casting long shadows. Same solar geometry on Earth."}
+      - {id: relief, feature: relief_m, fn: ramp_up, args: [p50, p95], weight: 0.4, comparability: R, dimension: "Topography",
+         label: "Local relief (shadow-casting terrain)", unit: "m", src: moonbase, verified: true,
+         why: "The Moon Base region is a 'topography of extremes'; relief creates the long shadows that challenge navigation."}
+      - {id: dry, feature: precip_ann_mm, fn: ramp_down, args: [250, 500], weight: 0.25, comparability: R, dimension: "Biology & surface",
+         label: "Desert climate (bare ground proxy)", unit: "mm/yr", src: usgs_desert, verified: true, proxy: true,
+         why: "Proxy for bare, unvegetated ground. Replace with MODIS NDVI when available."}
+      - {id: dark, feature: albedo, fn: ramp_down, args: [0.35, 0.6], weight: 0.35, comparability: D, dimension: "Surface materials",
+         label: "Dark, snow-free surface (albedo)", unit: "0–1", src: nssdc_moon, verified: true,
+         why: "Lunar Bond albedo is 0.11; snow (albedo > 0.6) changes contrast and is not regolith."}
+
+  - id: moon_night_survival
+    target: moon_south_pole
+    label: "Survive the cold & dark"
+    nasa_gap: "Extreme temperature-tolerant mechanisms and electronics; surviving the lunar night"
+    gap_src: moonbase
+    analog_threshold: 0.6
+    params:
+      - {id: night, feature: polarnight_days, fn: ramp_up, args: [5, 25], weight: 0.35, comparability: R, dimension: "Illumination",
+         label: "Days without sunrise", unit: "days/month", src: moonbase, verified: true,
+         why: "Systems must survive prolonged periods of extreme cold and dark."}
+      - {id: cold, feature: tmin_c, fn: ramp_down, args: [p2, p30], weight: 0.45, comparability: R, dimension: "Temperature",
+         label: "Coldest hourly air temperature", unit: "°C", src: power, verified: true,
+         why: "Relative extreme: lunar polar cold traps are far colder than Earth; we rank Earth's coldest places."}
+      - {id: cycle, feature: trange_c, fn: ramp_up, args: [p50, p95], weight: 0.2, comparability: R, dimension: "Temperature",
+         label: "Monthly temperature swing", unit: "°C", src: power, verified: true,
+         why: "Thermal cycling stresses seals, batteries and mechanisms."}
+
+  - id: moon_polar_mobility
+    target: moon_south_pole
+    label: "Extreme-slope polar mobility"
+    nasa_gap: "Mobility systems that descend and climb extreme crater slopes to reach frozen volatiles"
+    gap_src: moonbase
+    analog_threshold: 0.6
+    params:
+      - {id: noice, feature: albedo_min, fn: ramp_down, args: [0.45, 0.7], gate: true, comparability: D, dimension: "Surface materials",
+         label: "Not an ice sheet (snow-free-season albedo)", unit: "0–1", src: nssdc_moon, verified: true,
+         why: "Ice sheets are not rock/regolith terrain."}
+      - {id: slope, feature: slope_p90_deg, fn: ramp_up, args: [p75, p98], weight: 0.35, comparability: R, dimension: "Topography",
+         label: "Steep terrain (regional slope, p90)", unit: "°", src: terrain, verified: true,
+         why: "Regional (~5 km) slope; use the local 30 m zoom to test NASA's < 20° EVA limit."}
+      - {id: relief, feature: relief_m, fn: ramp_up, args: [p75, p98], weight: 0.3, comparability: R, dimension: "Topography",
+         label: "Local relief", unit: "m", src: terrain, verified: true,
+         why: "Deep craters and massifs dominate the South Pole region."}
+      - {id: cold, feature: tmin_ann_c, fn: ramp_down, args: [p5, p50], weight: 0.15, comparability: R, dimension: "Temperature",
+         label: "Cold operations", unit: "°C", src: power, verified: true,
+         why: "Mobility hardware must operate cold."}
+      - {id: dry, feature: precip_ann_mm, fn: ramp_down, args: [250, 500], weight: 0.2, comparability: R, dimension: "Biology & surface",
+         label: "Desert climate (bare ground proxy)", unit: "mm/yr", src: usgs_desert, verified: true, proxy: true,
+         why: "Proxy for unvegetated ground."}
+
+  - id: moon_volatiles
+    target: moon_south_pole
+    label: "Frozen volatiles prospecting (ISRU)"
+    nasa_gap: "Resource locations and regolith properties to secure Moon Base sites"
+    gap_src: moonbase
+    analog_threshold: 0.6
+    params:
+      - {id: noice, feature: albedo_min, fn: ramp_down, args: [0.45, 0.7], gate: true, comparability: D, dimension: "Surface materials",
+         label: "Not an ice sheet (snow-free-season albedo)", unit: "0–1", src: nssdc_moon, verified: true,
+         why: "We want ice mixed in ground, not glaciers."}
+      - {id: permafrost, feature: maat_c, fn: ramp_down, args: [-10, -2], weight: 0.45, comparability: R, dimension: "Water & ice",
+         label: "Ground-ice likelihood (mean annual air temp)", unit: "°C", src: power, verified: false,
+         why: "Proxy: permafrost is common where mean annual air temperature is below about −2 °C. Replace with ESA CCI Permafrost."}
+      - {id: dry, feature: precip_ann_mm, fn: ramp_down, args: [250, 500], weight: 0.35, comparability: R, dimension: "Water & ice",
+         label: "Polar-desert dryness", unit: "mm/yr", src: usgs_desert, verified: true, proxy: true,
+         why: "Dry frozen ground keeps ice in the regolith-like soil rather than as snowpack."}
+      - {id: relief, feature: relief_m, fn: ramp_up, args: [p50, p90], weight: 0.2, comparability: R, dimension: "Topography",
+         label: "Crater-like relief (cold-trap geometry)", unit: "m", src: moonbase, verified: true,
+         why: "On the Moon, ice survives in topographic cold traps."}
+
+  - id: moon_dust_regolith
+    target: moon_south_pole
+    label: "Dust & regolith handling"
+    nasa_gap: "Dust mitigation and regolith excavation/compaction for site preparation"
+    gap_src: moonbase
+    analog_threshold: 0.6
+    params:
+      - {id: noice, feature: albedo_min, fn: ramp_down, args: [0.45, 0.7], gate: true, comparability: D, dimension: "Surface materials",
+         label: "Not an ice sheet (snow-free-season albedo)", unit: "0–1", src: nssdc_moon, verified: true,
+         why: "Regolith tests need loose mineral ground, not ice."}
+      - {id: hyperarid, feature: precip_ann_mm, fn: ramp_down, args: [50, 250], weight: 0.55, comparability: R, dimension: "Dust & wind",
+         label: "Hyper-aridity", unit: "mm/yr", src: usgs_desert, verified: true, proxy: true,
+         why: "Dry loose sediment behaves most like regolith; moisture binds grains."}
+      - {id: wind, feature: wind_ann, fn: ramp_up, args: [p25, p90], weight: 0.15, comparability: R, dimension: "Dust & wind",
+         label: "Wind (dust mobility)", unit: "m/s", src: power, verified: true,
+         why: "Wind lofts dust: a test of seals and optics (lunar dust is lofted by plumes and electrostatics instead)."}
+      - {id: flat, feature: slope_p90_deg, fn: ramp_down, args: [p75, p98], weight: 0.3, comparability: R, dimension: "Operations",
+         label: "Not mountainous (regional slope)", unit: "°", src: artemis_req, verified: true,
+         why: "At ~5 km pixels this only excludes mountains; the 30 m local zoom tests NASA's < 10° landing limit."}
+
+  - id: mars_ice_landing
+    target: mars_ice_zones
+    label: "Mars ice-rich landing zone"
+    nasa_gap: "Human landing near accessible subsurface ice (SWIM; SR-1 Freedom helicopter scouting)"
+    gap_src: swim
+    analog_threshold: 0.6
+    params:
+      - {id: noice, feature: albedo_min, fn: ramp_down, args: [0.45, 0.7], gate: true, comparability: D, dimension: "Surface materials",
+         label: "Not an ice sheet (snow-free-season albedo)", unit: "0–1", src: nssdc_mars, verified: true,
+         why: "Mars ice zones are dusty plains with buried ice, not exposed ice sheets."}
+      - {id: cold, feature: maat_c, fn: ramp_down, args: [-15, -2], weight: 0.3, comparability: R, dimension: "Water & ice",
+         label: "Frozen ground (mean annual air temp)", unit: "°C", src: nssdc_mars, verified: false,
+         why: "Mars averages −59 °C; we rank Earth's coldest ice-bearing ground (proxy)."}
+      - {id: hyperarid, feature: precip_ann_mm, fn: ramp_down, args: [250, 500], weight: 0.3, comparability: R, dimension: "Water & ice",
+         label: "Desert (cold or hot)", unit: "mm/yr", src: usgs_desert, verified: true, proxy: true,
+         why: "No precipitation on Mars; ice is preserved under dry cover."}
+      - {id: albedo, feature: albedo_min, fn: band, args: [0.1, 0.18, 0.3, 0.4], weight: 0.2, comparability: D, dimension: "Surface materials",
+         label: "Mars-like ground albedo (~0.25, snow-free season)", unit: "0–1", src: nssdc_mars, verified: false,
+         why: "Mars Bond albedo is 0.25 (planet-wide, includes atmosphere); site values vary."}
+      - {id: smooth, feature: slope_p90_deg, fn: ramp_down, args: [p75, p98], weight: 0.2, comparability: R, dimension: "Operations",
+         label: "Smooth plains for landing", unit: "°", src: swim, verified: true,
+         why: "SWIM's best ice regions (Arcadia) are broad plains suitable for landing."}
