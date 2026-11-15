@@ -2,166 +2,340 @@ import maplibregl from "maplibre-gl";
 import "maplibre-gl/dist/maplibre-gl.css";
 import "./style.css";
 import { cellRing, fmtLatLon, loadDataset, type Dataset } from "./data.ts";
-import { MIN_COVERAGE, haversineKm, membership, scoreCellMonth, scoreGrid, topCandidates, type GridScores } from "./scoring.ts";
-import type { Fact, Param, Profile } from "./types.ts";
+import { $, esc, slug } from "./dom.ts";
+import { ICON, LIGHT_ICON, LOGO, UI } from "./icons.ts";
+import { LANGS, detectLang, getLang, monthNames, num, setLang, t, tOpt, td, type Key, type Lang } from "./i18n.ts";
+import {
+  DESTINATIONS, MARS_BASE_SCALE, MISSIONS, PARTIAL_MIN, getMode, light, modeThreshold, parseModeQuery, pickMonth,
+  resolveMode, scoreModeCellMonth, scoreModeYear, withModeQuery,
+  type Destination, type Light, type Mission, type ModeGridScores, type ModeYear, type ResolvedPart,
+} from "./modes.ts";
+import { openOnboarding } from "./onboarding.ts";
+import { MIN_COVERAGE, haversineKm, membership, topCandidates } from "./scoring.ts";
+import type { PhotoCredit } from "./photo.ts";
+import { initTips, tip } from "./tip.ts";
+import type { Fact, Param } from "./types.ts";
 import type { Feature, FeatureCollection } from "geojson";
 
-const MONTHS = ["Jan", "Feb", "Mar", "Apr", "May", "Jun", "Jul", "Aug", "Sep", "Oct", "Nov", "Dec"];
 const GIBS = "https://gibs.earthdata.nasa.gov/wmts/epsg3857/best/BlueMarble_ShadedRelief_Bathymetry/default/GoogleMapsCompatible_Level8/{z}/{y}/{x}.jpeg";
 const MIN_SHOW = 0.25;
 const NEW_KM = 500;
-const RAMP: [number, string][] = [[0.25, "#3b0f70"], [0.45, "#8c2981"], [0.65, "#de4968"], [0.85, "#fe9f6d"], [1, "#fcfdbf"]];
-
-const $ = <T extends HTMLElement = HTMLElement>(sel: string) => document.querySelector(sel) as T;
-const esc = (s: string) => s.replace(/[&<>"]/g, (c) => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;" })[c]!);
-
-const state = { targetId: "", profileId: "", month: -1, weights: {} as Record<string, number>, selected: -1 };
-let d: Dataset;
-let map: maplibregl.Map;
-let scores: GridScores;
-let mapReady = false;
-
-const profile = (): Profile => d.m.profiles.find((p) => p.id === state.profileId)!;
-const target = () => d.m.targets[state.targetId];
-const src = (key: string) => d.m.sources[key];
-const srcLink = (key: string, text = "source") => {
-  const s = src(key);
-  return s ? `<a href="${s.url}" target="_blank" rel="noopener" title="${esc(s.title)}">${text}</a>` : "";
+const SITE_KM = 60;            // una celda: a esta distancia la ficha ofrece la foto del análogo documentado
+const GIBS_NATIVE_ZOOM = 8;    // resolución nativa de Blue Marble en GIBS (GoogleMapsCompatible_Level8)
+// La rampa del mapa sale de los tokens CSS (--ramp-0..3): una sola fuente para mapa, leyenda y calendario.
+const RAMP_STOPS = [0.25, 0.55, 0.8, 1];
+// Copia de seguridad por si la hoja de estilos aún no está aplicada al leer el token.
+const TOKEN_FALLBACK: Record<string, string> = {
+  "--ramp-0": "#3A506B", "--ramp-1": "#D97706", "--ramp-2": "#F4D6B0", "--ramp-3": "#FFF6E5",
+  "--navy-950": "#070C1D", "--navy-900": "#0B132B", "--sky-400": "#5BC0DE", "--sand-50": "#FFF6E5",
+  "--sand-200": "#F4D6B0", "--amber-600": "#D97706",
 };
+const token = (name: string) =>
+  getComputedStyle(document.documentElement).getPropertyValue(name).trim() || TOKEN_FALLBACK[name] || "#000000";
+const RAMP: [number, string][] = RAMP_STOPS.map((stop, k) => [stop, token(`--ramp-${k}`)]);
+const hexRgb = (h: string) => [1, 3, 5].map((k) => parseInt(h.slice(k, k + 2), 16));
+const ui = (svg: string, cls = "ui") => `<span class="${cls}" aria-hidden="true">${svg}</span>`;
+const LANG_KEY = "lumea.lang";
 
-function colorFor(s: number): string {
-  if (Number.isNaN(s)) return "";
-  let c = RAMP[0][1];
-  for (const [t, col] of RAMP) if (s >= t) c = col;
-  return c;
+const state = {
+  d: null as Destination | null, m: null as Mission | null, month: -1, selected: -1,
+  picker: null as "dest" | "mission" | null, monthGrid: false,
+};
+let ds: Dataset;
+let map: maplibregl.Map;
+let parts: ResolvedPart[] = [];        // pruebas (perfiles) del modo activo, con sus pesos
+let thr = 0.6;                         // umbral "análogo" del modo
+let year: ModeYear | null = null;      // los 12 meses ya calculados
+let scores: ModeGridScores | null = null; // vista del mes elegido (o mejor mes)
+let mapReady = false;
+let newCands: number[] = [];                 // candidatos del ranking marcados NUEVO
+let sitePopup: maplibregl.Popup | null = null;
+let photos: Record<string, PhotoCredit> = {};  // créditos de las fotos (img/sites/credits.json)
+
+const target = () => ds.m.targets[parts[0].profile.target];
+const src = (key: string) => ds.m.sources[key];
+const srcLink = (key: string, text = t("source")) => {
+  const s = src(key);
+  return s ? `<a href="${s.url}" target="_blank" rel="noopener" ${tip(s.title)}>${esc(text)}</a>` : "";
+};
+/** Enlace a la fuente como icono (con su título en el tooltip y como nombre accesible). */
+const srcIcon = (key: string) => {
+  const s = src(key);
+  return s ? `<a class="ext" href="${s.url}" target="_blank" rel="noopener" aria-label="${esc(s.title)}" ${tip(s.title)}>${UI.ext}</a>` : "";
+};
+const pshort = (id: string, fallback: string) => tOpt(`pshort.${id}`, td(fallback));
+const profileTip = (p: ResolvedPart) => `${td(p.profile.label)} — ${t("nasa.gap")} ${td(p.profile.nasa_gap)}`;
+const modeLabel = () => t("mode.label", { d: t(`dest.${state.d!}.name`), m: t(`mission.${state.m!}.name`) });
+const fmtScore = (s: number) => (Number.isNaN(s) ? "–" : num(s, 2));
+const minCoverage = () => ds.m.min_coverage ?? MIN_COVERAGE;
+
+/** Color de la rampa para un score (misma interpolación lineal que la capa del mapa). */
+function colorFor(s: number): number[] {
+  const x = Math.min(1, Math.max(RAMP[0][0], s));
+  let k = 0;
+  while (k < RAMP.length - 2 && x > RAMP[k + 1][0]) k++;
+  const [a, ca] = RAMP[k], [b, cb] = RAMP[k + 1];
+  const f = (x - a) / (b - a), A = hexRgb(ca), B = hexRgb(cb);
+  return A.map((v, i) => Math.round(v + (B[i] - v) * f));
+}
+/** Tinta legible (AA) sobre un color de la rampa: oscura sobre claros, clara sobre oscuros. */
+function inkOn([r, g, b]: number[]): string {
+  const lin = (v: number) => { const c = v / 255; return c <= 0.03928 ? c / 12.92 : ((c + 0.055) / 1.055) ** 2.4; };
+  return 0.2126 * lin(r) + 0.7152 * lin(g) + 0.0722 * lin(b) > 0.2 ? token("--navy-900") : token("--sand-50");
 }
 
 function cellName(c: number): string {
-  return d.m.names[`${d.ci[c]}_${d.cj[c]}`] ?? fmtLatLon(d.lat[c], d.lon[c]);
+  return ds.m.names[`${ds.ci[c]}_${ds.cj[c]}`] ?? fmtLatLon(ds.lat[c], ds.lon[c]);
 }
 
 function nearestKnown(c: number) {
   let best = { km: Infinity, name: "" };
-  for (const k of d.m.known) {
-    const km = haversineKm(d.lat[c], d.lon[c], k.lat, k.lon);
+  for (const k of ds.m.known) {
+    const km = haversineKm(ds.lat[c], ds.lon[c], k.lat, k.lon);
     if (km < best.km) best = { km, name: k.name };
   }
   return best;
 }
 
 function fmtVal(p: Param, x: number): string {
-  if (Number.isNaN(x)) return "no data";
+  if (Number.isNaN(x)) return t("nodata");
   const digits = p.unit === "0–1" ? 2 : Math.abs(x) < 10 ? 1 : 0;
-  return `${x.toFixed(digits)} ${p.unit}`.trim();
+  return `${num(x, digits)} ${td(p.unit)}`.trim();
 }
 
 /** "± 12 %" con la incertidumbre que publica la propia fuente (ESA CCI), si existe. */
 function uncText(p: Param, c: number, m: number): string {
-  if (!p.unc_feature || !d.m.features[p.unc_feature]) return "";
-  const u = d.get(p.unc_feature, c, m);
-  return Number.isNaN(u) ? "" : ` ± ${u.toFixed(0)} ${p.unit}`;
+  if (!p.unc_feature || !ds.m.features[p.unc_feature]) return "";
+  const u = ds.get(p.unc_feature, c, m);
+  return Number.isNaN(u) ? "" : ` ± ${num(u)} ${td(p.unit)}`;
 }
 
-// ------------------------------------------------------------------ sidebar
-function renderTargets() {
-  const el = $("#targets");
-  el.innerHTML = Object.entries(d.m.targets).map(([id, t]) => `
-    <button role="tab" data-id="${id}" aria-selected="${id === state.targetId}">
-      ${t.body === "moon" ? "🌕 Moon" : "🔴 Mars"}<small>${esc(t.name.replace(/^NASA Moon Base — /, "Moon Base · "))}</small>
+// ------------------------------------------------------------------ símbolos propios (con explicación al pasar el cursor)
+/** Semáforo: icono + texto (nunca solo color) y su regla en el tooltip. */
+function lightChip(l: Light, strongMin: number, long = false): string {
+  const text = t(long ? `light.${l}` : `light.${l}.short`);
+  const why = t(`light.${l}.tip`, { thr: num(strongMin, 2), mid: num(PARTIAL_MIN, 2) });
+  return `<span class="light ${l}" tabindex="0" ${tip(why)}>${LIGHT_ICON[l]}${esc(text)}</span>`;
+}
+
+const badge = (cls: string, text: string, why: string, focusable = true) =>
+  `<span class="badge ${cls}"${focusable ? ' tabindex="0"' : ""} ${tip(why)}>${esc(text)}</span>`;
+
+function paramBadges(p: Param, focusable = true) {
+  return badge(p.comparability, p.comparability, t(`comp.${p.comparability}`), focusable) +
+    (p.proxy ? badge("proxy", t("badge.proxy"), t("badge.proxy.title"), focusable) : "") +
+    (p.verified ? "" : badge("proxy", t("badge.unverified"), t("badge.unverified.title"), focusable));
+}
+
+// ------------------------------------------------------------------ textos estáticos e idioma
+function applyStatic() {
+  document.documentElement.lang = getLang();
+  document.title = t("app.title");
+  document.querySelector('meta[name="description"]')?.setAttribute("content", t("app.description"));
+  document.querySelectorAll<HTMLElement>("[data-i18n]").forEach((el) => (el.innerHTML = t(el.dataset.i18n as Key)));
+  document.querySelectorAll<HTMLElement>("[data-i18n-aria]").forEach((el) =>
+    el.setAttribute("aria-label", t(el.dataset.i18nAria as Key)));
+  document.querySelectorAll<HTMLElement>("[data-i18n-tip]").forEach((el) => (el.dataset.tip = t(el.dataset.i18nTip as Key)));
+  $("#logo").innerHTML = LOGO;
+  $("#btn-method").innerHTML = UI.info;
+  $("#btn-continents").innerHTML = UI.globe;
+  renderContinents();
+  const el = $("#lang");
+  el.setAttribute("aria-label", t("lang.label"));
+  el.innerHTML = LANGS.map((l) =>
+    `<button type="button" data-lang="${l}" aria-pressed="${l === getLang()}">${l.toUpperCase()}</button>`).join("");
+  el.querySelectorAll<HTMLButtonElement>("button").forEach((b) =>
+    b.addEventListener("click", () => changeLang(b.dataset.lang as Lang)));
+}
+
+function changeLang(l: Lang) {
+  if (l === getLang()) return;
+  setLang(l);
+  try { localStorage.setItem(LANG_KEY, l); } catch { /* modo privado: sin persistencia */ }
+  const q = new URLSearchParams(location.search);
+  q.set("lang", l);
+  history.replaceState(null, "", `?${q.toString()}${location.hash}`);
+  applyStatic();
+  if (!ds || !state.d) return;
+  renderAll();
+  sitePopup?.remove();
+  if (state.selected >= 0) renderCard(state.selected);
+}
+
+// ------------------------------------------------------------------ 2–3. selectores de destino y misión
+function renderPickers() {
+  const cur = {
+    dest: { icon: ICON[state.d!], label: t("side.dest"), name: t(`dest.${state.d!}.name`), sub: t(`dest.${state.d!}.sub`) },
+    mission: { icon: ICON[state.m!], label: t("side.mission"), name: t(`mission.${state.m!}.name`), sub: "" },
+  };
+  for (const kind of ["dest", "mission"] as const) {
+    const b = $<HTMLButtonElement>(`#pick-${kind}`), c = cur[kind];
+    b.setAttribute("aria-expanded", String(state.picker === kind));
+    b.innerHTML = `<span class="ico">${c.icon}</span>
+      <span class="txt"><small>${esc(c.label)}</small><b>${esc(c.name)}</b></span>${ui(UI.chevron, "caret")}`;
+  }
+  const panel = $("#pick-panel");
+  panel.hidden = state.picker === null;
+  if (state.picker === null) { panel.innerHTML = ""; return; }
+  const f = num(MARS_BASE_SCALE, 1);
+  const opts = state.picker === "dest"
+    ? DESTINATIONS.map((d) => ({ v: d as string, icon: ICON[d], name: t(`dest.${d}.name`), sub: t(`dest.${d}.sub`), what: t(`dest.${d}.what`), on: d === state.d }))
+    : MISSIONS.map((m) => ({ v: m as string, icon: ICON[m], name: t(`mission.${m}.name`), sub: "", what: t(`mode.${state.d!}.${m}.what`, { f }), on: m === state.m }));
+  panel.setAttribute("aria-label", cur[state.picker].label);
+  panel.innerHTML = opts.map((o) => `
+    <button type="button" class="pick-opt" data-v="${o.v}" aria-pressed="${o.on}">
+      <span class="ico">${o.icon}</span>
+      <span class="txt"><b>${esc(o.name)}${o.sub ? ` <small>${esc(o.sub)}</small>` : ""}</b><span>${esc(o.what)}</span></span>
     </button>`).join("");
-  el.querySelectorAll("button").forEach((b) => b.addEventListener("click", () => {
-    state.targetId = b.dataset.id!;
-    state.profileId = d.m.profiles.find((p) => p.target === state.targetId)!.id;
-    resetWeights(); renderAll(); recompute();
-  }));
-  const t = target();
-  $("#target-info").innerHTML = `<p>${esc(t.summary)}</p><ul>${t.facts.map((f: Fact) =>
-    `<li><b>${esc(f.k)}:</b> ${esc(f.v)} ${srcLink(f.src, "↗")}</li>`).join("")}</ul>`;
-}
-
-function renderProfiles() {
-  const el = $("#profiles");
-  el.innerHTML = d.m.profiles.filter((p) => p.target === state.targetId).map((p) => `
-    <button data-id="${p.id}" aria-pressed="${p.id === state.profileId}">
-      <b>${esc(p.label)}</b><span>NASA gap: ${esc(p.nasa_gap)}</span>
-    </button>`).join("");
-  el.querySelectorAll("button").forEach((b) => b.addEventListener("click", () => {
-    state.profileId = b.dataset.id!;
-    resetWeights(); renderAll(); recompute();
+  const kind = state.picker;
+  panel.querySelectorAll<HTMLButtonElement>("button").forEach((b) => b.addEventListener("click", () => {
+    state.picker = null;
+    if (kind === "dest") setMode(b.dataset.v as Destination, state.m!);
+    else setMode(state.d!, b.dataset.v as Mission);
+    $(`#pick-${kind}`).focus();
   }));
 }
 
+function togglePicker(kind: "dest" | "mission") {
+  state.picker = state.picker === kind ? null : kind;
+  renderPickers();
+  if (state.picker) ($("#pick-panel").querySelector<HTMLElement>('[aria-pressed="true"]') ?? $("#pick-panel button"))?.focus();
+}
+
+// ------------------------------------------------------------------ 4. meses
 function renderMonths() {
-  const el = $("#months");
-  el.innerHTML = `<button class="best" data-m="-1" aria-pressed="${state.month === -1}" title="Best month per cell">Best</button>` +
-    MONTHS.map((m, k) => `<button data-m="${k}" aria-pressed="${state.month === k}" title="${m}">${m[0]}</button>`).join("");
-  el.querySelectorAll("button").forEach((b) => b.addEventListener("click", () => {
-    state.month = Number(b.dataset.m);
-    renderMonths(); recompute();
-  }));
-  $("#month-note").textContent = state.month < 0
-    ? "Each cell shows its best month. Pick a month to see when a place becomes analogous."
-    : `${MONTHS[state.month]} climatology (2001–2025) and solar geometry.`;
-}
+  const MN = monthNames("long"), SH = monthNames();
+  const best = $<HTMLButtonElement>("#month-best"), pick = $<HTMLButtonElement>("#month-pick");
+  best.setAttribute("aria-pressed", String(state.month < 0));
+  best.innerHTML = `${ui(UI.star)}${esc(t("month.best.btn"))}`;
+  best.dataset.tip = t("month.best.title");
+  pick.setAttribute("aria-expanded", String(state.monthGrid));
+  pick.setAttribute("aria-pressed", String(state.month >= 0));
+  pick.innerHTML = `${esc(state.month < 0 ? t("month.pick") : MN[state.month])}${ui(UI.chevron, "caret")}`;
+  $("#month-note").textContent = state.month < 0 ? t("month.note.best") : t("month.note.one", { month: MN[state.month].toLowerCase() });
 
-function resetWeights() {
-  state.weights = {};
-  for (const p of profile().params) if (!p.gate) state.weights[p.id] = p.weight ?? 0;
-}
-
-function paramBadges(p: Param) {
-  const comp = { D: "Direct: same physical quantity", R: "Relative: Earth extreme (percentile)", N: "Not reproducible on Earth" }[p.comparability];
-  return `<span class="badge ${p.comparability}" title="${comp}">${p.comparability}</span>` +
-    (p.proxy ? `<span class="badge proxy" title="Indirect indicator: measures a related quantity">proxy</span>` : "") +
-    (p.verified ? "" : `<span class="badge proxy" title="Threshold still pending a primary source">unverified</span>`);
-}
-
-function renderWeights() {
-  const el = $("#weights");
-  el.innerHTML = profile().params.map((p) => p.gate
-    ? `<div class="req" title="${esc(p.why)}">Required: ${esc(p.label)} ${paramBadges(p)}</div>`
-    : `<div class="w"><label for="w-${p.id}" title="${esc(p.why)}">${esc(p.label)} ${paramBadges(p)}</label>
-        <output id="o-${p.id}">${state.weights[p.id].toFixed(2)}</output>
-        <input id="w-${p.id}" type="range" min="0" max="1" step="0.05" value="${state.weights[p.id]}" /></div>`).join("");
-  let t: number | undefined;
-  el.querySelectorAll<HTMLInputElement>("input").forEach((inp) => inp.addEventListener("input", () => {
-    const id = inp.id.slice(2);
-    state.weights[id] = Number(inp.value);
-    $(`#o-${id}`).textContent = Number(inp.value).toFixed(2);
-    clearTimeout(t); t = window.setTimeout(recompute, 120);
+  const grid = $("#month-grid");
+  grid.hidden = !state.monthGrid;
+  if (!state.monthGrid || !year) { grid.innerHTML = ""; return; }
+  const counts = Array.from(year.analogCellsByMonth), max = Math.max(1, ...counts);
+  const flat = Math.min(...counts) === max;            // modo con criterios anuales: todos los meses iguales
+  const top = flat ? -1 : counts.indexOf(max);
+  grid.innerHTML = `<p class="note">${esc(t("month.grid.hint", { thr: num(thr, 2) }))}${flat ? ` ${esc(t("month.flat"))}` : ""}</p><div class="mgrid" role="group" aria-label="${esc(t("month.pick"))}">` +
+    SH.map((m, k) => `<button type="button" data-m="${k}" aria-pressed="${state.month === k}"
+        aria-label="${esc(t("month.cell.tip", { month: MN[k], n: num(counts[k]), thr: num(thr, 2) }))}"
+        ${tip(t(k === top && counts[k] > 0 ? "month.cell.top" : "month.cell.tip", { month: MN[k], n: num(counts[k]), thr: num(thr, 2) }))}>
+        <b>${m}${k === top && counts[k] > 0 ? ui(UI.peak, "topm") : ""}</b><span class="cnt">${num(counts[k])}</span>
+        <span class="mbar" aria-hidden="true"><i style="transform:scaleX(${counts[k] / max})"></i></span></button>`).join("") + "</div>";
+  grid.querySelectorAll<HTMLButtonElement>("button").forEach((b) => b.addEventListener("click", () => {
+    setMonth(Number(b.dataset.m));
+    grid.querySelector<HTMLElement>(`[data-m="${state.month}"]`)?.focus();
   }));
 }
 
+function setMonth(m: number) {
+  state.month = m;
+  refresh(true);
+}
+
+// ------------------------------------------------------------------ 5. qué estás viendo
+function renderWhat() {
+  const f = num(MARS_BASE_SCALE, 1), tg = target(), MN = monthNames("long");
+  $("#what").innerHTML = `
+    <p>${esc(t(`mode.${state.d!}.${state.m!}.what`, { f }))} ${esc(t("what.cells", { dest: t(`what.dest.${state.d!}`) }))}
+      ${esc(state.month < 0 ? t("what.month.best") : t("what.month.one", { month: MN[state.month].toLowerCase() }))} ${esc(t("what.click"))}</p>
+    <p class="note">${esc(parts.length > 1 ? t("mode.combines", { n: parts.length }) : t("mode.single"))}</p>
+    <ul class="chips">${parts.map((p) => `<li tabindex="0" ${tip(profileTip(p))}>${esc(pshort(p.profile.id, p.profile.label))}</li>`).join("")}</ul>
+    ${state.d === "marte" && state.m === "base" ? `<p class="note">${esc(t("mode.marsbase.note", { f }))}</p>` : ""}
+    <details class="about">
+      <summary><span class="ico">${ICON[state.d!]}</span><span class="txt"><b>${esc(td(tg.name))}</b><small>${esc(t("dest.about"))}</small></span></summary>
+      <div class="about-body"><p>${esc(td(tg.summary))}</p>
+      <ul>${tg.facts.map((x: Fact) => `<li><b>${esc(td(x.k))}:</b> ${esc(td(x.v))} ${srcIcon(x.src)}</li>`).join("")}</ul></div>
+    </details>`;
+}
+
+// ------------------------------------------------------------------ 6. especificaciones (cobertura, validación y estabilidad por separado)
+function renderSpecs() {
+  if (!year) return;
+  const minCov = minCoverage();
+  let low = 0;
+  for (let c = 0; c < ds.n; c++) if (year.coverage[c] < minCov - 1e-6) low++;
+  const how = (section: string) => `<button type="button" class="link" data-method="${section}">${esc(t("specs.method"))}</button>`;
+  const pct = (x: number | null | undefined, digits: number) => (x == null ? "–" : num(x, digits));
+  const perTest = (line: (p: ResolvedPart) => string) => parts.map((p) => p.profile.validation
+    ? `<li><b tabindex="0" ${tip(profileTip(p))}>${esc(pshort(p.profile.id, p.profile.label))}</b> ${line(p)} ${srcIcon(p.profile.gap_src)}</li>` : "").join("");
+  $("#specs-body").innerHTML = `
+    <div class="spec"><h3>${esc(t("specs.coverage.h"))}</h3>
+      <ul><li>${esc(t("specs.coverage.grid", { n: num(ds.n) }))}</li>
+      <li>${esc(t("specs.coverage.analog", { n: num(year.analogCellsAnyMonth), pct: num(100 * year.analogCellsAnyMonth / ds.n, 1), thr: num(thr, 2) }))}</li>
+      <li>${esc(t("specs.coverage.low", { n: num(low), cov: num(minCov * 100) }))}</li></ul>
+      <p class="links">${how("m-model")} · ${srcLink("power", t("specs.src.power"))} · ${srcLink("terrain", t("specs.src.terrain"))}</p></div>
+    <div class="spec"><h3>${esc(t("specs.validation.h"))}</h3>
+      <ul>${perTest((p) => `${esc(t("specs.val.known", { pct: pct(p.profile.validation!.known_median_pct, 0), n: p.profile.validation!.n_known }))}
+        ${esc(t("specs.val.tropics", { pct: pct(p.profile.validation!.tropics_pct, 1) }))}`)}</ul>
+      <p class="links">${how("m-val")} · <button type="button" class="link" data-method="m-limits">${esc(t("specs.src.list", { n: ds.m.known.length }))}</button></p></div>
+    <div class="spec"><h3>${esc(t("specs.stability.h"))}</h3>
+      <ul>${perTest((p) => `${esc(t("specs.stab.jaccard", { j: num(p.profile.validation!.jaccard, 2) }))}
+        ${esc(t("specs.stab.land", { pct: pct(p.profile.validation!.analog_land_pct, 1) }))}`)}</ul>
+      <p class="links">${how("m-val")}</p></div>
+    <p class="note">${esc(t("method.val.note"))}</p>`;
+  $("#specs-body").querySelectorAll<HTMLButtonElement>("[data-method]").forEach((b) =>
+    b.addEventListener("click", () => openMethod(b.dataset.method)));
+}
+
+// ------------------------------------------------------------------ 7. ranking
 function renderCandidates() {
-  const prof = profile();
-  const minCov = d.m.min_coverage ?? MIN_COVERAGE;
-  const top = topCandidates(scores.score, d.lat, d.lon, 12, d.m.nms_km, scores.coverage, minCov);
-  $("#cand-hint").textContent = `≥ ${d.m.nms_km} km apart · data coverage ≥ ${(minCov * 100).toFixed(0)}%`;
+  if (!scores) return;
+  const sc = scores;
+  const top = topCandidates(sc.score, ds.lat, ds.lon, 12, ds.m.nms_km, sc.coverage, minCoverage());
+  newCands = top.filter((c) => nearestKnown(c).km > NEW_KM);
+  syncCandidateLayer();
+  $("#cand-hint").textContent = t("cands.hint", { km: ds.m.nms_km, cov: num(minCoverage() * 100) });
   $("#cands").innerHTML = top.map((c, r) => {
     const nk = nearestKnown(c);
-    const nov = nk.km > NEW_KM ? `<span class="badge new" title="Farther than ${NEW_KM} km from any known analog in our baseline">NEW</span>` : `near ${esc(nk.name)}`;
-    const when = `${scores.months[c]} mo ≥ ${prof.analog_threshold}`;
-    return `<li><button data-c="${c}"><span class="rk">${r + 1}</span><span class="nm">${esc(cellName(c))}</span>
-      <span class="sc">${scores.score[c].toFixed(2)}</span><span class="sub">${when} · ${nov}</span></button></li>`;
-  }).join("") || `<li class="note">No cell reaches the display threshold for this month.</li>`;
+    const nov = nk.km > NEW_KM
+      ? `<span class="badge new" ${tip(t("badge.new.title", { km: NEW_KM }))}>${esc(t("badge.new"))}</span>`
+      : `<span ${tip(t("card.near", { name: nk.name, km: num(Math.round(nk.km)) }))}>${esc(t("cands.near", { name: nk.name }))}</span>`;
+    const when = `<span ${tip(t("tip.months", { thr: num(thr, 2) }))}>${esc(t("cands.months", { n: sc.months[c], thr: num(thr, 2) }))}</span>`;
+    return `<li><button type="button" data-c="${c}"><span class="rk">${r + 1}</span><span class="nm">${esc(cellName(c))}</span>
+      <span class="sc" ${tip(t("tip.score"))}>${fmtScore(sc.score[c])}</span><span class="sub">${when} · ${nov}</span></button></li>`;
+  }).join("") || `<li class="note">${esc(t("cands.none"))}</li>`;
   $("#cands").querySelectorAll<HTMLButtonElement>("button").forEach((b) => b.addEventListener("click", () => {
     const c = Number(b.dataset.c);
-    map.flyTo({ center: [d.lon[c], d.lat[c]], zoom: Math.max(map.getZoom(), 3.2) });
+    map.flyTo({ center: [ds.lon[c], ds.lat[c]], zoom: Math.max(map.getZoom(), 3.2) });
     select(c);
   }));
 }
 
+// ------------------------------------------------------------------ 8. modo avanzado: pesos por prueba y criterio
+function renderWeights() {
+  const el = $("#weights");
+  el.innerHTML = parts.map((part, i) => `<fieldset class="wgroup">
+    <legend>${esc(td(part.profile.label))}</legend>` + part.params.map((p) => p.gate
+    ? `<div class="req" tabindex="0" ${tip(`${t("adv.gate.tip")} ${td(p.why)}`)}>${ui(UI.gate)}${esc(t("param.required"))} ${esc(td(p.label))} ${paramBadges(p, false)}</div>`
+    : `<div class="w"><label for="w-${i}-${p.id}" ${tip(td(p.why))}>${esc(td(p.label))}</label><span class="bdg">${paramBadges(p)}</span>
+        <output id="o-${i}-${p.id}" ${tip(t("adv.weight.tip"))}>${num(part.weights[p.id], 2)}</output>
+        <input id="w-${i}-${p.id}" data-part="${i}" data-id="${p.id}" type="range" min="0" max="1" step="0.05" value="${part.weights[p.id]}" /></div>`).join("") + "</fieldset>").join("");
+  let timer: number | undefined;
+  el.querySelectorAll<HTMLInputElement>("input").forEach((inp) => inp.addEventListener("input", () => {
+    const i = Number(inp.dataset.part), id = inp.dataset.id!;
+    parts[i].weights[id] = Number(inp.value);
+    $(`#o-${i}-${id}`).textContent = num(Number(inp.value), 2);
+    clearTimeout(timer); timer = window.setTimeout(recompute, 120);
+  }));
+}
+
 function renderLegend() {
-  $("#legend").innerHTML = `Analog score · ${esc(profile().label)}<div class="bar"></div>
-    <div class="ticks"><span>${MIN_SHOW}</span><span>0.5</span><span>0.75</span><span>1</span></div>
-    <div>Cells below ${MIN_SHOW} hidden · ○ known analog</div>`;
+  $("#legend").innerHTML = `<b>${esc(t("legend.title", { mode: modeLabel() }))}</b><div class="bar" style="background:linear-gradient(90deg, ${RAMP.map(([stop, col]) => `${col} ${Math.round((stop - RAMP[0][0]) / (1 - RAMP[0][0]) * 100)}%`).join(", ")})"></div>
+    <div class="ticks"><span>${num(MIN_SHOW, 2)}</span><span>${num(0.5, 1)}</span><span>${num(0.75, 2)}</span><span>1</span></div>
+    <div>${esc(t("legend.note", { min: num(MIN_SHOW, 2) }))}</div>
+    <div class="keys"><span><i class="dot site"></i>${esc(t("legend.site"))}</span><span><i class="dot cand"></i>${esc(t("legend.cand"))}</span></div>`;
 }
 
 function renderAll() {
-  renderTargets(); renderProfiles(); renderMonths(); renderWeights(); renderLegend();
+  renderPickers(); renderMonths(); renderWhat(); renderSpecs(); renderCandidates(); renderWeights(); renderLegend();
 }
 
-// ------------------------------------------------------------------ card
+// ------------------------------------------------------------------ ficha de celda
 function select(c: number) {
   state.selected = c;
   if (mapReady) map.setFilter("sel", ["==", ["id"], c]);
@@ -169,101 +343,233 @@ function select(c: number) {
 }
 
 function renderCard(c: number) {
-  const prof = profile(), t = target();
-  const monthScores = MONTHS.map((_, m) => scoreCellMonth(d.get, prof.params, state.weights, c, m));
+  if (!scores) return;
+  const MN = monthNames(), ML = monthNames("long"), tg = target();
+  const monthScores = MN.map((_, m) => scoreModeCellMonth(ds.get, parts, c, m));
   const showM = state.month >= 0 ? state.month : Math.max(0, scores.bestMonth[c]);
-  const sNow = monthScores[showM];
+  const now = monthScores[showM];
   const nk = nearestKnown(c);
-  const rows = prof.params.map((p) => {
-    const x = d.get(p.feature, c, showM);
-    return { p, x, s: membership(x, p.fn, p.args) };
-  });
-  const row = (r: { p: Param; x: number; s: number }) => `<div class="row">
-      <span>${r.p.gate ? "Required: " : ""}${esc(r.p.label)} ${paramBadges(r.p)}</span>
-      <span class="val">${fmtVal(r.p, r.x)}${uncText(r.p, c, showM)} · ${Number.isNaN(r.s) ? "–" : r.s.toFixed(2)}</span>
-      <div class="meter"><i style="width:${Number.isNaN(r.s) ? 0 : r.s * 100}%"></i></div>
-      <span class="why">${esc(r.p.why)} ${srcLink(r.p.src)}</span></div>`;
-  const group = (cls: string, title: string, list: typeof rows) =>
-    list.length ? `<h4 class="${cls}">${title}</h4>${list.map(row).join("")}` : "";
-  const ok = rows.filter((r) => r.s >= 0.7), mid = rows.filter((r) => r.s > 0.3 && r.s < 0.7);
-  const no = rows.filter((r) => r.s <= 0.3);
-  const missing = rows.filter((r) => Number.isNaN(r.s));
-  const analogMonths = monthScores.map((s, m) => (s.score >= prof.analog_threshold ? MONTHS[m] : "")).filter(Boolean);
+  const named = cellName(c) !== fmtLatLon(ds.lat[c], ds.lon[c]);
+  const list = (items: string[]) => new Intl.ListFormat(getLang(), { style: "long", type: "conjunction" }).format(items);
+
+  // ---- datos de cada criterio en el mes mostrado
+  type Row = { p: Param; x: number; s: number; w: number };
+  const rowsByTest: Row[][] = parts.map((part) => part.params.map((p) => {
+    const x = ds.get(p.feature, c, showM);
+    return { p, x, s: membership(x, p.fn, p.args), w: p.gate ? 1 : part.weights[p.id] ?? 0 };
+  }));
+  /** criterios sin repetir (un mismo dato puede servir a varias pruebas), los de más peso primero */
+  const uniq = (rows: Row[]) => {
+    const seen = new Set<string>();
+    return [...rows].sort((a, b) => b.w - a.w).filter((r) => (seen.has(r.p.label) ? false : (seen.add(r.p.label), true)));
+  };
+  const counted = rowsByTest.flat().filter((r) => r.w > 0);
+  const strong = uniq(counted.filter((r) => r.s >= 0.7)).slice(0, 4);
+  const broken = uniq(counted.filter((r) => r.s <= 0.3)).slice(0, 4);
+  const missing = uniq(counted.filter((r) => Number.isNaN(r.s)));
+  const crit = (r: Row) => `<li tabindex="0" ${tip(td(r.p.why))}>${esc(td(r.p.label))}</li>`;
+
+  // ---- semáforo por prueba y resumen en una frase
+  const tests = parts.map((part, i) => ({
+    part, i, s: now.parts[i].score, l: light(now.parts[i].score, part.profile.analog_threshold),
+    name: pshort(part.profile.id, part.profile.label),
+  }));
+  const bits = (["strong", "partial", "broken", "nodata"] as const)
+    .map((l) => ({ l, names: tests.filter((x) => x.l === l).map((x) => x.name) }))
+    .filter((g) => g.names.length).map((g) => t(`card.sum.${g.l}`, { list: list(g.names) })).join("; ");
+  const sentence = bits ? `${bits[0].toUpperCase()}${bits.slice(1)}.` : "";
+  const lights = tests.map((x) => `<li>${lightChip(x.l, x.part.profile.analog_threshold)}
+      <span class="nm" tabindex="0" ${tip(profileTip(x.part))}>${esc(x.name)}</span>
+      <span class="sc" ${tip(t("tip.score.test"))}>${fmtScore(x.s)}</span></li>`).join("");
+
+  // ---- qué cambiar o probar: todo sale de los datos de esta celda
+  const valid = monthScores.map((s, m) => ({ s: s.score, m })).filter((x) => !Number.isNaN(x.s));
+  const next: string[] = [];
+  if (valid.length) {
+    const best = valid.reduce((a, b) => (b.s > a.s ? b : a)), worst = valid.reduce((a, b) => (b.s < a.s ? b : a));
+    const nAnalog = valid.filter((x) => x.s >= thr).length;
+    if (best.m !== showM && best.s - now.score >= 0.01)
+      next.push(t("card.try.month", { month: ML[best.m].toLowerCase(), a: fmtScore(now.score), b: fmtScore(best.s) }));
+    else if (nAnalog === 0) next.push(t("card.try.never", { thr: num(thr, 2) }));
+    else if (best.s - worst.s < 0.01) next.push(t("card.try.flat"));
+    else next.push(t("card.try.span", { n: nAnalog, month: ML[worst.m].toLowerCase(), score: fmtScore(worst.s) }));
+  }
+  const weak = tests.filter((x) => !Number.isNaN(x.s)).sort((a, b) => a.s - b.s)[0];
+  if (weak) {
+    const drag = rowsByTest[weak.i].filter((r) => !Number.isNaN(r.s) && r.w > 0).sort((a, b) => a.s - b.s)[0];
+    if (drag && drag.s < 0.7) next.push(parts.length > 1
+      ? t("card.try.weak", { test: weak.name, score: fmtScore(weak.s), crit: td(drag.p.label) })
+      : t("card.try.weak1", { crit: td(drag.p.label), score: fmtScore(drag.s) }));
+  }
+  if (missing.length) next.push(t("card.try.missing", { list: list(missing.map((r) => td(r.p.label))) }));
+
+  // ---- detalle (números y fuentes), detrás de "Ver detalle"
+  const row = (r: Row) => `<div class="row">
+      <span>${r.p.gate ? `${esc(t("param.required"))} ` : ""}${esc(td(r.p.label))} ${paramBadges(r.p)}</span>
+      <span class="val">${fmtVal(r.p, r.x)}${uncText(r.p, c, showM)} · ${fmtScore(r.s)}</span>
+      <div class="meter"><i style="transform:scaleX(${Number.isNaN(r.s) ? 0 : r.s})"></i></div>
+      <span class="why">${esc(td(r.p.why))} ${srcLink(r.p.src)}</span></div>`;
+  const GROUP_ICON: Record<string, string> = { ok: UI.check, mid: UI.approx, no: UI.cross, never: UI.minus };
+  const group = (cls: string, key: Key, rows: Row[]) =>
+    rows.length ? `<h5 class="${cls}">${GROUP_ICON[cls] ?? ""}${esc(t(key))}</h5>${rows.map(row).join("")}` : "";
+  const details = tests.map((x) => {
+    const rows = rowsByTest[x.i];
+    return `<details class="pdetail"${parts.length === 1 ? " open" : ""}>
+      <summary><span class="nm">${esc(td(x.part.profile.label))}</span>${lightChip(x.l, x.part.profile.analog_threshold)}</summary>
+      <p class="note">${esc(t("nasa.gap"))} ${esc(td(x.part.profile.nasa_gap))} ${srcLink(x.part.profile.gap_src)}</p>
+      ${group("ok", "card.group.ok", rows.filter((r) => r.s >= 0.7))}
+      ${group("mid", "card.group.mid", rows.filter((r) => r.s > 0.3 && r.s < 0.7))}
+      ${group("no", "card.group.no", rows.filter((r) => r.s <= 0.3))}
+      ${group("never", "card.group.missing", rows.filter((r) => Number.isNaN(r.s)))}
+    </details>`;
+  }).join("");
+
+  const calCell = (s: number, name: string) => {
+    const rgb = colorFor(s);
+    return `<div style="background:rgb(${rgb.join(" ")});color:${inkOn(rgb)};opacity:${s < MIN_SHOW ? 0.4 : 1}" ${tip(`${name}: ${fmtScore(s)}`)}>${name[0]}</div>`;
+  };
+  const analogMonths = monthScores.map((s, m) => (s.score >= thr ? MN[m] : "")).filter(Boolean);
   const novelty = nk.km > NEW_KM
-    ? `<span class="badge new">NEW</span> ${Math.round(nk.km).toLocaleString("en")} km from the nearest known analog in our baseline (${esc(nk.name)})`
-    : `Known analog nearby: ${esc(nk.name)} (${Math.round(nk.km)} km)`;
+    ? `${badge("new", t("badge.new"), t("badge.new.title", { km: NEW_KM }))} ${esc(t("card.new", { km: num(Math.round(nk.km)), name: nk.name }))}`
+    : esc(t("card.near", { name: nk.name, km: num(Math.round(nk.km)) }));
+  const coords = `${ds.lat[c].toFixed(3)}, ${ds.lon[c].toFixed(3)}`;
+  const siteHere = nk.km <= SITE_KM ? ds.m.known.findIndex((k) => k.name === nk.name) : -1;
+
   const card = $("#card");
   card.hidden = false;
-  card.innerHTML = `<button class="close" aria-label="Close">×</button>
+  card.innerHTML = `<button type="button" class="close" aria-label="${esc(t("card.close"))}">${UI.cross}</button>
     <h3>${esc(cellName(c))}</h3>
-    <div class="coords">${cellName(c) === fmtLatLon(d.lat[c], d.lon[c]) ? "Unnamed cell" : fmtLatLon(d.lat[c], d.lon[c])} · cell ≈ 55 × ${Math.round(69 * Math.cos(d.lat[c] * Math.PI / 180))} km</div>
-    <div class="big"><b>${Number.isNaN(sNow.score) ? "–" : sNow.score.toFixed(2)}</b>
-      <span>${esc(prof.label)} · ${MONTHS[showM]}${state.month < 0 ? " (best month)" : ""}<br>
-      <span class="note">Data coverage ${(sNow.coverage * 100).toFixed(0)}%</span></span></div>
-    <div class="note">${novelty}</div>
-    <h4>Analog calendar</h4>
-    <div class="cal">${monthScores.map((s, m) => Number.isNaN(s.score)
-      ? `<div class="nan" title="${MONTHS[m]}: no data">${MONTHS[m][0]}</div>`
-      : `<div style="background:${colorFor(Math.max(s.score, 0.25))};opacity:${s.score < MIN_SHOW ? 0.35 : 1}" title="${MONTHS[m]}: ${s.score.toFixed(2)}">${MONTHS[m][0]}</div>`).join("")}</div>
-    <p class="note">${analogMonths.length ? `Analogous (≥ ${prof.analog_threshold}) in: ${analogMonths.join(", ")}` : `Never reaches ${prof.analog_threshold} in any month.`}</p>
-    ${group("ok", "Strong analogy", ok)}
-    ${group("mid", "Partial analogy", mid)}
-    ${group("no", "Where the analogy breaks", no)}
-    ${group("never", "No data here (lowers confidence, not the score)", missing)}
-    <h4 class="never">Never analog on Earth</h4>
-    ${t.never_analog.map((f) => `<div class="row"><span>${esc(f.k)} <span class="badge N">N</span></span><span class="why">${esc(f.v)} ${srcLink(f.src)}</span></div>`).join("")}
-    ${t.body === "moon" ? `<p class="note">Next step (multi-scale): zoom to a 30 m DEM to test NASA's landing limits — slope &lt; 10° over 100 m and &lt; 20° over 2 km for EVA ${srcLink("artemis_req")}.</p>` : ""}`;
+    <div class="coords"><span>${named ? `${fmtLatLon(ds.lat[c], ds.lon[c])} · ` : ""}${esc(t("card.cell", { km: Math.round(69 * Math.cos(ds.lat[c] * Math.PI / 180)) }))}</span>
+      <button type="button" class="copy" data-coords="${coords}" aria-label="${esc(t("card.copy"))}: ${coords}" ${tip(t("card.copy"))}>${UI.copy}<span>${coords}</span></button></div>
+    <div class="big"><b ${tip(t("tip.score"))}>${fmtScore(now.score)}</b>
+      <span>${lightChip(light(now.score, thr), thr, true)}<br>${esc(modeLabel())} · ${MN[showM]}${state.month < 0 ? ` ${esc(t("card.best"))}` : ""}<br>
+      <span class="note" tabindex="0" ${tip(t("tip.coverage"))}>${esc(t("card.coverage", { pct: num(now.coverage * 100) }))}</span></span></div>
+    <p class="sum">${esc(sentence)}</p>
+    <ul class="lights" aria-label="${esc(t("card.lights"))}">${lights}</ul>
+    <div class="cal" role="group" aria-label="${esc(t("card.calendar"))}">${monthScores.map((s, m) => Number.isNaN(s.score)
+      ? `<div class="nan" ${tip(t("card.month.nodata", { month: MN[m] }))}>${MN[m][0]}</div>`
+      : calCell(s.score, MN[m])).join("")}</div>
+    <p class="note">${esc(analogMonths.length ? t("card.analog.in", { thr: num(thr, 2), months: analogMonths.join(", ") }) : t("card.analog.never", { thr: num(thr, 2) }))}</p>
+    ${siteHere >= 0 ? photoButton(siteHere, true) : ""}
+    <div class="blocks">
+      <section class="blk yes"><h4>${UI.check}${esc(t("card.yes"))}</h4>
+        <ul>${strong.map(crit).join("") || `<li class="none">${esc(t("card.yes.none"))}</li>`}</ul></section>
+      <section class="blk no"><h4>${UI.warn}${esc(t("card.no"))}</h4>
+        <ul>${broken.map(crit).join("") || `<li class="none">${esc(t("card.no.none"))}</li>`}
+        <li class="none">${esc(t("card.never.short", { list: list(tg.never_analog.map((f) => td(f.k).toLowerCase())) }))}</li></ul></section>
+      <section class="blk next"><h4>${UI.swap}${esc(t("card.next.h"))}</h4>
+        <ul>${next.map((x) => `<li>${esc(x)}</li>`).join("")}
+        ${tg.body === "moon" ? `<li>${t("card.next")} ${srcLink("artemis_req")}.</li>` : ""}</ul></section>
+    </div>
+    <details class="more"><summary>${esc(t("card.more"))}</summary>
+      <p class="note">${novelty}</p>
+      <p class="note">${esc(t("light.rule", { thr: num(thr, 2), mid: num(PARTIAL_MIN, 2) }))}</p>
+      ${details}
+      <h4 class="never">${esc(t("card.never"))}</h4>
+      ${tg.never_analog.map((f) => `<div class="row"><span>${esc(td(f.k))} ${badge("N", "N", t("comp.N"))}</span><span class="why">${esc(td(f.v))} ${srcLink(f.src)}</span></div>`).join("")}
+    </details>`;
   card.querySelector(".close")!.addEventListener("click", () => {
     card.hidden = true; state.selected = -1; if (mapReady) map.setFilter("sel", ["==", ["id"], -1]);
   });
+  card.querySelector<HTMLButtonElement>(".copy")!.addEventListener("click", async (e) => {
+    const b = e.currentTarget as HTMLButtonElement;
+    try {
+      await navigator.clipboard.writeText(b.dataset.coords!);
+      b.classList.add("done");
+      b.dataset.tip = t("card.copied", { coords: b.dataset.coords! });
+    } catch {
+      b.dataset.tip = t("card.copy.fail", { coords: b.dataset.coords! });
+    }
+    b.querySelector("span")!.textContent = b.dataset.tip!;
+  });
+  card.querySelector<HTMLButtonElement>("[data-photo]")?.addEventListener("click", () => openPhoto(siteHere));
 }
 
-// ------------------------------------------------------------------ method
-function renderMethod() {
-  const dlg = $<HTMLDialogElement>("#method");
-  const val = d.m.profiles.map((p) => p.validation ? `<tr><td>${esc(p.label)}</td>
-      <td>${p.validation.known_median_pct?.toFixed(0) ?? "–"} (n=${p.validation.n_known})</td>
-      <td>${p.validation.tropics_pct?.toFixed(1) ?? "–"}%</td><td>${p.validation.analog_land_pct?.toFixed(1) ?? "–"}%</td><td>${p.validation.jaccard.toFixed(2)}</td></tr>` : "").join("");
-  dlg.innerHTML = `<h3>Method, limits &amp; sources</h3>
-  <p><b>Proving Grounds</b> turns NASA's own Moon Base capability gaps (2026) into <i>test profiles</i>, and searches every land cell on Earth for places — and months — that reproduce the physical conditions each test needs.</p>
-  <h4>Model</h4>
-  <p>Each criterion maps a measured value to a 0–1 membership <code>s</code> (ramp or band). For cell <i>c</i> and month <i>m</i>:
-  <code>score = (Σ w·s / Σ w) × Π s<sub>required</sub></code>. Missing data lowers <i>coverage</i>, never the score; cells below ${((d.m.min_coverage ?? MIN_COVERAGE) * 100).toFixed(0)}% coverage are kept off the candidate ranking. Percentile thresholds (pXX) are weighted by cell area, so small high-latitude cells do not over-count the poles. The calendar repeats this for each month.</p>
-  <h4>Comparability</h4>
-  <ul><li><span class="badge D">D</span> Direct — same physical quantity, comparable in value (e.g., Sun elevation, albedo).</li>
-  <li><span class="badge R">R</span> Relative — Earth cannot reach Moon/Mars values; we rank Earth's extremes (percentiles).</li>
-  <li><span class="badge N">N</span> Never analog — gravity, vacuum/thin CO₂ air, radiation. Shown on every site card.</li>
-  <li><span class="badge proxy">proxy</span> Indirect indicator (e.g., desert climate as a stand-in for bare ground). <span class="badge proxy">unverified</span> threshold still pending a primary source.</li></ul>
-  <h4>Validation (percentile 100 = best)</h4>
-  <table><tr><th>Profile</th><th>Documented analogs (positives), median pct.</th><th>Humid tropics flagged analog (neg. control, ideal 0%)</th><th>Share of Earth's land area flagged analog</th><th>Analog-set stability (Jaccard), ±20% weights</th></tr>${val}</table>
-  <h4>Limits</h4>
-  <ul>
-    <li>Cells are 0.5° × 0.625° (~55 × 69 km at the equator): screening, not site certification. Small craters and lava tubes are not resolved.</li>
-    <li>Slope is regional (~5 km pixels), not the 100 m landing slope — that needs the local 30 m zoom.</li>
-    <li>Terrain tiles stop at 85°: the Antarctic interior has climate but no relief.</li>
-    <li>Temperature is 2 m air temperature (MERRA-2 reanalysis), not surface temperature.</li>
-    <li>Earth's sky scatters light into shadows; lunar shadows are pitch-black. The lighting analogy is geometric, not radiometric.</li>
-    <li>Bare-ground criteria use a climate proxy (flagged <span class="badge proxy">proxy</span>). Permafrost comes from ESA CCI Permafrost v5.0 (2023, 1 km) with ESA's published per-pixel uncertainty (shown as ±). That product only maps the permafrost domain (25–85° N, 60–85° S): warm land with no ESA pixel (mean air temp &gt; +3 °C) is set to 0 %; cold land with no ESA pixel (e.g., high Andes) is "no data".</li>
-    <li>Known-analog baseline: ${d.m.known.length} curated sites with approximate coordinates${d.m.known_verified ? "" : " (to be replaced by the USGS layer, doi:10.5066/P9J72921)"}.</li>
-  </ul>
-  <h4>Data &amp; sources</h4>
-  <ul>${Object.values(d.m.sources).map((s) => `<li><a href="${s.url}" target="_blank" rel="noopener">${esc(s.title)}</a></li>`).join("")}
-    <li>Basemap: NASA GIBS / Worldview — Blue Marble Shaded Relief &amp; Bathymetry.</li>
-    <li>Place names: © OpenStreetMap contributors (Nominatim).</li></ul>
-  <h4>Use of AI</h4>
-  <p class="note">An AI coding assistant helped with source lookup and boilerplate code. Scientific choices and claims are reviewed by the team and traced to the sources above.</p>
-  <p><button class="btn" id="close-method">Close</button></p>`;
-  dlg.querySelector("#close-method")!.addEventListener("click", () => dlg.close());
-  dlg.showModal();
+// ------------------------------------------------------------------ fotos de los análogos documentados (carga diferida)
+const photoOf = (i: number): PhotoCredit | undefined => photos[slug(ds.m.known[i].name)];
+
+function photoButton(i: number, withName = false): string {
+  if (!photoOf(i)) return "";
+  const label = withName ? t("card.photo", { name: ds.m.known[i].name }) : t("photo.open");
+  return `<button type="button" class="btn small photo-btn" data-photo="${i}">${UI.photo}<span>${esc(label)}</span></button>`;
 }
 
-// ------------------------------------------------------------------ map
+async function openPhoto(i: number) {
+  const p = photoOf(i);
+  if (p) (await import("./photo.ts")).openPhoto(ds.m.known[i], p);
+}
+
+// ------------------------------------------------------------------ método (carga diferida)
+async function openMethod(section?: string) {
+  (await import("./method.ts")).openMethod(ds, section);
+}
+
+// ------------------------------------------------------------------ mapa
 function cellsGeoJSON(): FeatureCollection {
   const features: Feature[] = [];
-  for (let c = 0; c < d.n; c++) {
-    features.push({ type: "Feature", id: c, properties: {}, geometry: { type: "Polygon", coordinates: [cellRing(d, c)] } });
+  for (let c = 0; c < ds.n; c++) {
+    features.push({ type: "Feature", id: c, properties: {}, geometry: { type: "Polygon", coordinates: [cellRing(ds, c)] } });
   }
   return { type: "FeatureCollection", features };
+}
+
+// Puntos como capas del mapa (no elementos HTML): al vivir sobre el globo, solo se pintan en el
+// hemisferio que mira la cámara y nunca se ven "a través" de la Tierra.
+function sitesGeoJSON(): FeatureCollection {
+  return { type: "FeatureCollection", features: ds.m.known.map((k, i) => ({
+    type: "Feature", id: i, properties: {}, geometry: { type: "Point", coordinates: [k.lon, k.lat] } })) };
+}
+
+function candidatesGeoJSON(): FeatureCollection {
+  return { type: "FeatureCollection", features: newCands.map((c) => ({
+    type: "Feature", id: c, properties: {}, geometry: { type: "Point", coordinates: [ds.lon[c], ds.lat[c]] } })) };
+}
+
+function syncCandidateLayer() {
+  if (!mapReady) return;
+  (map.getSource("cand-new") as maplibregl.GeoJSONSource | undefined)?.setData(candidatesGeoJSON());
+}
+
+function siteHtml(i: number): string {
+  const k = ds.m.known[i];
+  const body = t(k.body === "moon" ? "body.moon" : k.body === "mars" ? "body.mars" : "body.both");
+  return `<b>${esc(k.name)}</b><br>${esc(t("known.popup", { body, use: td(k.use) }))}<br><span class="approx">${esc(t("known.approx"))}</span>`;
+}
+
+function openSite(i: number) {
+  const k = ds.m.known[i];
+  sitePopup?.remove();
+  sitePopup = new maplibregl.Popup({ offset: 12, closeButton: false, maxWidth: "280px" })
+    .setLngLat([k.lon, k.lat]).setHTML(siteHtml(i) + photoButton(i)).addTo(map);
+  sitePopup.getElement().querySelector<HTMLButtonElement>("[data-photo]")?.addEventListener("click", () => openPhoto(i));
+}
+
+// Vistas de "Ir a continente": centro [lon, lat] y zoom en escritorio.
+const CONTINENTS: { id: "af" | "na" | "sa" | "an" | "as" | "eu" | "oc"; center: [number, number]; zoom: number }[] = [
+  { id: "af", center: [20, 2], zoom: 2.6 }, { id: "na", center: [-100, 45], zoom: 2.4 },
+  { id: "sa", center: [-60, -20], zoom: 2.6 }, { id: "an", center: [20, -82], zoom: 2.3 },
+  { id: "as", center: [95, 45], zoom: 2.2 }, { id: "eu", center: [15, 52], zoom: 3 },
+  { id: "oc", center: [140, -25], zoom: 2.8 },
+];
+
+function setContinentMenu(open: boolean) {
+  const btn = $("#btn-continents"), menu = $("#continents");
+  btn.setAttribute("aria-expanded", String(open));
+  menu.hidden = !open;
+  if (open) menu.querySelector<HTMLElement>("button")?.focus();
+}
+
+function renderContinents() {
+  const menu = $("#continents");
+  menu.innerHTML = CONTINENTS.map((c) =>
+    `<button type="button" role="menuitem" data-id="${c.id}">${esc(t(`cont.${c.id}`))}</button>`).join("");
+  menu.querySelectorAll<HTMLButtonElement>("button").forEach((b) => b.addEventListener("click", () => {
+    const c = CONTINENTS.find((x) => x.id === b.dataset.id)!;
+    setContinentMenu(false);
+    $("#btn-continents").focus();
+    // MapLibre omite la animación si la persona pidió menos movimiento (prefers-reduced-motion)
+    map.flyTo({ center: c.center, zoom: c.zoom - (window.innerWidth < 860 ? 1.3 : 0), duration: 1600 });
+  }));
 }
 
 function buildMap() {
@@ -273,15 +579,20 @@ function buildMap() {
       version: 8,
       projection: { type: "globe" },
       sources: {
-        gibs: { type: "raster", tiles: [GIBS], tileSize: 256, maxzoom: 8,
-          attribution: "Imagery: <a href='https://earthdata.nasa.gov/gibs'>NASA GIBS</a> Blue Marble" },
+        // Blue Marble es la capa GIBS sin nubes y sin huecos de mayor resolución (nivel 8, 500 m/px).
+        // En pantallas de alta densidad se piden teselas un nivel más finas para que no se vea borrosa.
+        gibs: { type: "raster", tiles: [GIBS], tileSize: window.devicePixelRatio > 1 ? 128 : 256, maxzoom: GIBS_NATIVE_ZOOM,
+          attribution: "<a href='https://earthdata.nasa.gov/gibs'>NASA GIBS</a> · Blue Marble · <a href='https://www.naturalearthdata.com/'>Natural Earth</a>" },
       },
       layers: [
-        { id: "bg", type: "background", paint: { "background-color": "#05070d" } },
-        { id: "gibs", type: "raster", source: "gibs", paint: { "raster-saturation": -0.35, "raster-brightness-max": 0.75 } },
+        { id: "bg", type: "background", paint: { "background-color": token("--navy-950") } },
+        { id: "gibs", type: "raster", source: "gibs", paint: { "raster-saturation": -0.5, "raster-brightness-max": 0.72, "raster-contrast": 0.05 } },
       ],
     },
-    center: [15, 55], zoom: 1.6, attributionControl: { compact: true },
+    // en pantallas estrechas el globo entero debe caber para ver resultados sin mover el mapa
+    center: [15, 55], zoom: window.innerWidth < 860 ? 0.6 : 1.6,
+    maxZoom: GIBS_NATIVE_ZOOM, // nunca se amplía la imagen más allá de su resolución nativa
+    attributionControl: { compact: true },
   });
   map.addControl(new maplibregl.NavigationControl({ showCompass: false }), "top-right");
   map.on("load", () => {
@@ -292,60 +603,152 @@ function buildMap() {
       "fill-opacity": ["case", [">=", s, MIN_SHOW], 0.82, 0],
     } });
     map.addLayer({ id: "sel", type: "line", source: "cells", filter: ["==", ["id"], -1],
-      paint: { "line-color": "#ffffff", "line-width": 2 } });
-    for (const k of d.m.known) {
-      const el = document.createElement("div");
-      el.className = "known-marker";
-      el.title = `Known analog: ${k.name}`;
-      new maplibregl.Marker({ element: el }).setLngLat([k.lon, k.lat])
-        .setPopup(new maplibregl.Popup({ offset: 10, closeButton: false })
-          .setHTML(`<b>${esc(k.name)}</b><br>Known analog (${k.body}) · ${esc(k.use)}<br><span style="color:#8d98ad">Approx. location</span>`))
-        .addTo(map);
+      paint: { "line-color": token("--sky-400"), "line-width": 2.5 } });
+
+    // candidato nuevo = anillo ámbar hueco; análogo documentado = punto arena macizo. Ambos opacos.
+    map.addSource("cand-new", { type: "geojson", data: candidatesGeoJSON() });
+    map.addLayer({ id: "cand-new", type: "circle", source: "cand-new", paint: {
+      "circle-radius": 7.5, "circle-color": token("--navy-900"),
+      "circle-stroke-color": token("--amber-600"), "circle-stroke-width": 3 } });
+    map.addSource("sites", { type: "geojson", data: sitesGeoJSON() });
+    map.addLayer({ id: "sites", type: "circle", source: "sites", paint: {
+      "circle-radius": 5.5, "circle-color": token("--sand-200"),
+      "circle-stroke-color": token("--navy-900"), "circle-stroke-width": 2 } });
+
+    const hover = new maplibregl.Popup({ offset: 12, closeButton: false, closeOnClick: false, className: "hover-pop" });
+    map.on("mousemove", "sites", (e) => {
+      const i = e.features?.[0]?.id;
+      if (typeof i !== "number") return;
+      hover.setLngLat([ds.m.known[i].lon, ds.m.known[i].lat])
+        .setHTML(`<b>${esc(ds.m.known[i].name)}</b><br><span class="approx">${esc(t("known.kind"))}</span>`).addTo(map);
+    });
+    map.on("mousemove", "cand-new", (e) => {
+      const c = e.features?.[0]?.id;
+      if (typeof c !== "number") return;
+      hover.setLngLat([ds.lon[c], ds.lat[c]])
+        .setHTML(`<b>${esc(cellName(c))}</b><br><span class="approx">${esc(t("cand.kind"))}</span>`).addTo(map);
+    });
+    for (const layer of ["sites", "cand-new", "cells"]) {
+      map.on("mouseenter", layer, () => (map.getCanvas().style.cursor = "pointer"));
+      map.on("mouseleave", layer, () => { map.getCanvas().style.cursor = ""; hover.remove(); });
     }
-    map.on("click", "cells", (e) => { const id = e.features?.[0]?.id; if (typeof id === "number") select(id); });
-    map.on("mouseenter", "cells", () => (map.getCanvas().style.cursor = "pointer"));
-    map.on("mouseleave", "cells", () => (map.getCanvas().style.cursor = ""));
+    // un solo clic decide: sitio documentado > candidato nuevo > celda
+    map.on("click", (e) => {
+      const hit = map.queryRenderedFeatures(e.point, { layers: ["sites", "cand-new", "cells"] });
+      const site = hit.find((f) => f.layer.id === "sites");
+      if (site && typeof site.id === "number") { hover.remove(); openSite(site.id); return; }
+      const id = (hit.find((f) => f.layer.id === "cand-new") ?? hit.find((f) => f.layer.id === "cells"))?.id;
+      if (typeof id === "number" && scores) select(id);
+    });
+
     mapReady = true;
     paint();
     $("#loading").hidden = true;
+    loadCoastlines();
   });
 }
 
+/** Contornos de continentes (Natural Earth 1:50m, dominio público): capa sutil, cargada en diferido. */
+async function loadCoastlines() {
+  try {
+    const coast = await fetch("data/coast50m.json").then((r) => r.json());
+    map.addSource("coast", { type: "geojson", data: coast });
+    map.addLayer({ id: "coast", type: "line", source: "coast", paint: {
+      "line-color": token("--sand-200"), "line-opacity": 0.4,
+      "line-width": ["interpolate", ["linear"], ["zoom"], 0, 0.5, 6, 1.2],
+    } }, "cells");
+  } catch { /* capa decorativa: si falla la descarga, el mapa sigue funcionando */ }
+}
+
 function paint() {
-  if (!mapReady) return;
-  for (let c = 0; c < d.n; c++) {
+  if (!mapReady || !scores) return;
+  for (let c = 0; c < ds.n; c++) {
     const v = scores.score[c];
     map.setFeatureState({ source: "cells", id: c }, { s: Number.isNaN(v) ? 0 : v });
   }
 }
 
+/** Recalcula los 12 meses (cambió el modo o un peso). */
 function recompute() {
-  const prof = profile();
-  scores = scoreGrid(d.n, d.get, prof.params, state.weights, prof.analog_threshold, state.month);
+  year = scoreModeYear(ds.n, ds.get, parts, thr);
+  refresh(false);
+}
+
+/** Cambia de mes sobre el año ya calculado: instantáneo. `pulse` anima el relevo en el mapa. */
+function refresh(pulse: boolean) {
+  if (!year) return;
+  scores = pickMonth(year, state.month);
+  const el = $("#map");
+  if (pulse) el.classList.add("updating");
   paint();
-  renderCandidates();
-  renderLegend();
+  if (pulse) window.setTimeout(() => el.classList.remove("updating"), 60); // el fundido de vuelta lo hace la transición CSS
+  renderMonths(); renderWhat(); renderSpecs(); renderCandidates(); renderLegend();
   if (state.selected >= 0) renderCard(state.selected);
 }
 
+// ------------------------------------------------------------------ modo
+function setMode(d: Destination, m: Mission) {
+  state.d = d; state.m = m;
+  parts = resolveMode(getMode(d, m), ds.m.profiles);
+  thr = modeThreshold(parts);
+  history.replaceState(null, "", withModeQuery(location.search, d, m) + location.hash); // compartible
+  $("#app").classList.add("has-mode");
+  renderPickers(); renderWeights();
+  recompute();
+}
+
 // ------------------------------------------------------------------ init
+function wire() {
+  $("#pick-dest").addEventListener("click", () => togglePicker("dest"));
+  $("#pick-mission").addEventListener("click", () => togglePicker("mission"));
+  $("#month-best").addEventListener("click", () => setMonth(-1));
+  $("#month-pick").addEventListener("click", () => { state.monthGrid = !state.monthGrid; renderMonths(); });
+  $("#reset").addEventListener("click", () => {
+    parts = resolveMode(getMode(state.d!, state.m!), ds.m.profiles);
+    renderWeights(); recompute();
+  });
+  $("#btn-method").addEventListener("click", () => openMethod());
+  $("#btn-continents").addEventListener("click", () => setContinentMenu($("#continents").hidden));
+  // Jakob: Esc y clic fuera cierran el desplegable de destino/misión
+  document.addEventListener("keydown", (e) => {
+    if (e.key === "Escape" && state.picker) { const k = state.picker; state.picker = null; renderPickers(); $(`#pick-${k}`).focus(); }
+    if (e.key === "Escape" && !$("#continents").hidden) { setContinentMenu(false); $("#btn-continents").focus(); }
+  });
+  document.addEventListener("pointerdown", (e) => {
+    if (state.picker && !(e.target as Element).closest(".pickers")) { state.picker = null; renderPickers(); }
+    if (!$("#continents").hidden && !(e.target as Element).closest("#continents, #btn-continents")) setContinentMenu(false);
+  });
+}
+
 async function init() {
+  let stored: string | null = null;
+  try { stored = localStorage.getItem(LANG_KEY); } catch { /* sin almacenamiento */ }
+  setLang(detectLang(location.search, stored));
+  applyStatic();
+  initTips();
+
+  const data = loadDataset(); // se descarga mientras la persona elige
+  // créditos de las fotos: archivo pequeño; las imágenes solo se piden al abrir el visor
+  fetch("img/sites/credits.json").then((r) => (r.ok ? r.json() : null))
+    .then((j) => { if (j?.sites) photos = j.sites; }).catch(() => { /* sin fotos: la app sigue igual */ });
+  const fromUrl = parseModeQuery(location.search);
+  const choice = fromUrl ? Promise.resolve(fromUrl) : openOnboarding(null, changeLang);
   try {
-    d = await loadDataset();
+    ds = await data;
   } catch (err) {
-    $("#loading").textContent = "Could not load data. Run the pipeline first (see README).";
+    $("#loading").textContent = t("loading.error");
     throw err;
   }
-  state.targetId = Object.keys(d.m.targets)[0];
-  state.profileId = d.m.profiles.find((p) => p.target === state.targetId)!.id;
-  resetWeights();
-  renderAll();
-  const prof = profile();
-  scores = scoreGrid(d.n, d.get, prof.params, state.weights, prof.analog_threshold, state.month);
-  renderCandidates();
-  $("#reset").addEventListener("click", () => { resetWeights(); renderWeights(); recompute(); });
-  $("#btn-method").addEventListener("click", renderMethod);
+  wire();
   buildMap();
+  $("#loading").classList.add("mini"); // datos listos: el panel ya se puede usar mientras termina el mapa
+  const c = await choice;
+  setMode(c.d, c.m);
+}
+
+// Gancho de depuración, solo en desarrollo local: permite comprobar el mapa desde la consola.
+if (["localhost", "127.0.0.1"].includes(location.hostname)) {
+  (globalThis as { __lumea?: unknown }).__lumea = { map: () => map, select, openSite, openPhoto };
 }
 
 init();

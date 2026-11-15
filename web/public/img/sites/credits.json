@@ -1,0 +1,559 @@
+{
+  "generated": "2026-11-15",
+  "note": "Site coordinates are approximate (see pipeline/config/known_analogs.yaml); images are centred on them.",
+  "sites": {
+    "haughton-impact-structure-devon-island": {
+      "name": "Haughton impact structure, Devon Island",
+      "file": "haughton-impact-structure-devon-island.jpg",
+      "source": "NASA Worldview Snapshots (NASA GIBS / EOSDIS)",
+      "layer": "Landsat_WELD_CorrectedReflectance_TrueColor_Global_Annual",
+      "layer_title": "Landsat WELD Corrected Reflectance, True Color (annual composite Dec 1999 – Nov 2000)",
+      "sensor": "Landsat 5 TM / Landsat 7 ETM+",
+      "date": "2000-12-01",
+      "resolution_m": 30,
+      "width_km": 60,
+      "bbox": [
+        75.2003,
+        -90.7477,
+        75.5597,
+        -88.6123
+      ],
+      "center": [
+        75.38,
+        -89.68
+      ],
+      "empty_fraction": 0,
+      "license": "Public domain: NASA/USGS imagery is not copyrighted. Credit requested: NASA Worldview.",
+      "url": "https://wvs.earthdata.nasa.gov/api/v1/snapshot?REQUEST=GetSnapshot&TIME=2000-12-01&BBOX=75.2003%2C-90.7477%2C75.5597%2C-88.6123&CRS=EPSG%3A4326&LAYERS=Landsat_WELD_CorrectedReflectance_TrueColor_Global_Annual&WRAP=none&FORMAT=image%2Fjpeg&WIDTH=960&HEIGHT=640"
+    },
+    "axel-heiberg-island-expedition-fiord": {
+      "name": "Axel Heiberg Island (Expedition Fiord)",
+      "file": "axel-heiberg-island-expedition-fiord.jpg",
+      "source": "NASA Worldview Snapshots (NASA GIBS / EOSDIS)",
+      "layer": "Landsat_WELD_CorrectedReflectance_TrueColor_Global_Annual",
+      "layer_title": "Landsat WELD Corrected Reflectance, True Color (annual composite Dec 1999 – Nov 2000)",
+      "sensor": "Landsat 5 TM / Landsat 7 ETM+",
+      "date": "2000-12-01",
+      "resolution_m": 30,
+      "width_km": 60,
+      "bbox": [
+        79.2203,
+        -92.265,
+        79.5797,
+        -89.335
+      ],
+      "center": [
+        79.4,
+        -90.8
+      ],
+      "empty_fraction": 0,
+      "license": "Public domain: NASA/USGS imagery is not copyrighted. Credit requested: NASA Worldview.",
+      "url": "https://wvs.earthdata.nasa.gov/api/v1/snapshot?REQUEST=GetSnapshot&TIME=2000-12-01&BBOX=79.2203%2C-92.265%2C79.5797%2C-89.335&CRS=EPSG%3A4326&LAYERS=Landsat_WELD_CorrectedReflectance_TrueColor_Global_Annual&WRAP=none&FORMAT=image%2Fjpeg&WIDTH=960&HEIGHT=640"
+    },
+    "mcmurdo-dry-valleys": {
+      "name": "McMurdo Dry Valleys",
+      "file": "mcmurdo-dry-valleys.jpg",
+      "source": "NASA Worldview Snapshots (NASA GIBS / EOSDIS)",
+      "layer": "BlueMarble_NextGeneration",
+      "layer_title": "Blue Marble: Next Generation (cloud-free MODIS composite, 2004)",
+      "sensor": "Terra MODIS",
+      "date": "2004-08-01",
+      "resolution_m": 500,
+      "width_km": 480,
+      "bbox": [
+        -78.9373,
+        151.839,
+        -76.0627,
+        171.761
+      ],
+      "center": [
+        -77.5,
+        161.8
+      ],
+      "empty_fraction": 0.03,
+      "license": "Public domain: NASA/USGS imagery is not copyrighted. Credit requested: NASA Worldview.",
+      "url": "https://wvs.earthdata.nasa.gov/api/v1/snapshot?REQUEST=GetSnapshot&TIME=2004-08-01&BBOX=-78.9373%2C151.839%2C-76.0627%2C171.761&CRS=EPSG%3A4326&LAYERS=BlueMarble_NextGeneration&WRAP=none&FORMAT=image%2Fjpeg&WIDTH=960&HEIGHT=640"
+    },
+    "atacama-desert-yungay": {
+      "name": "Atacama Desert (Yungay)",
+      "file": "atacama-desert-yungay.jpg",
+      "source": "NASA Worldview Snapshots (NASA GIBS / EOSDIS)",
+      "layer": "Landsat_WELD_CorrectedReflectance_TrueColor_Global_Annual",
+      "layer_title": "Landsat WELD Corrected Reflectance, True Color (annual composite Dec 1999 – Nov 2000)",
+      "sensor": "Landsat 5 TM / Landsat 7 ETM+",
+      "date": "2000-12-01",
+      "resolution_m": 30,
+      "width_km": 60,
+      "bbox": [
+        -24.2597,
+        -70.2152,
+        -23.9003,
+        -69.6248
+      ],
+      "center": [
+        -24.08,
+        -69.92
+      ],
+      "empty_fraction": 0,
+      "license": "Public domain: NASA/USGS imagery is not copyrighted. Credit requested: NASA Worldview.",
+      "url": "https://wvs.earthdata.nasa.gov/api/v1/snapshot?REQUEST=GetSnapshot&TIME=2000-12-01&BBOX=-24.2597%2C-70.2152%2C-23.9003%2C-69.6248&CRS=EPSG%3A4326&LAYERS=Landsat_WELD_CorrectedReflectance_TrueColor_Global_Annual&WRAP=none&FORMAT=image%2Fjpeg&WIDTH=960&HEIGHT=640"
+    },
+    "death-valley": {
+      "name": "Death Valley",
+      "file": "death-valley.jpg",
+      "source": "NASA Worldview Snapshots (NASA GIBS / EOSDIS)",
+      "layer": "Landsat_WELD_CorrectedReflectance_TrueColor_Global_Annual",
+      "layer_title": "Landsat WELD Corrected Reflectance, True Color (annual composite Dec 1999 – Nov 2000)",
+      "sensor": "Landsat 5 TM / Landsat 7 ETM+",
+      "date": "2000-12-01",
+      "resolution_m": 30,
+      "width_km": 60,
+      "bbox": [
+        36.3203,
+        -117.3353,
+        36.6797,
+        -116.6647
+      ],
+      "center": [
+        36.5,
+        -117
+      ],
+      "empty_fraction": 0,
+      "license": "Public domain: NASA/USGS imagery is not copyrighted. Credit requested: NASA Worldview.",
+      "url": "https://wvs.earthdata.nasa.gov/api/v1/snapshot?REQUEST=GetSnapshot&TIME=2000-12-01&BBOX=36.3203%2C-117.3353%2C36.6797%2C-116.6647&CRS=EPSG%3A4326&LAYERS=Landsat_WELD_CorrectedReflectance_TrueColor_Global_Annual&WRAP=none&FORMAT=image%2Fjpeg&WIDTH=960&HEIGHT=640"
+    },
+    "mars-desert-research-station": {
+      "name": "Mars Desert Research Station",
+      "file": "mars-desert-research-station.jpg",
+      "source": "NASA Worldview Snapshots (NASA GIBS / EOSDIS)",
+      "layer": "Landsat_WELD_CorrectedReflectance_TrueColor_Global_Annual",
+      "layer_title": "Landsat WELD Corrected Reflectance, True Color (annual composite Dec 1999 – Nov 2000)",
+      "sensor": "Landsat 5 TM / Landsat 7 ETM+",
+      "date": "2000-12-01",
+      "resolution_m": 30,
+      "width_km": 29,
+      "bbox": [
+        38.3232,
+        -110.9562,
+        38.4968,
+        -110.6238
+      ],
+      "center": [
+        38.41,
+        -110.79
+      ],
+      "empty_fraction": 0,
+      "license": "Public domain: NASA/USGS imagery is not copyrighted. Credit requested: NASA Worldview.",
+      "url": "https://wvs.earthdata.nasa.gov/api/v1/snapshot?REQUEST=GetSnapshot&TIME=2000-12-01&BBOX=38.3232%2C-110.9562%2C38.4968%2C-110.6238&CRS=EPSG%3A4326&LAYERS=Landsat_WELD_CorrectedReflectance_TrueColor_Global_Annual&WRAP=none&FORMAT=image%2Fjpeg&WIDTH=960&HEIGHT=640"
+    },
+    "black-point-lava-flow-d-rats": {
+      "name": "Black Point Lava Flow (D-RATS)",
+      "file": "black-point-lava-flow-d-rats.jpg",
+      "source": "NASA Worldview Snapshots (NASA GIBS / EOSDIS)",
+      "layer": "Landsat_WELD_CorrectedReflectance_TrueColor_Global_Annual",
+      "layer_title": "Landsat WELD Corrected Reflectance, True Color (annual composite Dec 1999 – Nov 2000)",
+      "sensor": "Landsat 5 TM / Landsat 7 ETM+",
+      "date": "2000-12-01",
+      "resolution_m": 30,
+      "width_km": 29,
+      "bbox": [
+        35.5932,
+        -111.6304,
+        35.7668,
+        -111.3096
+      ],
+      "center": [
+        35.68,
+        -111.47
+      ],
+      "empty_fraction": 0,
+      "license": "Public domain: NASA/USGS imagery is not copyrighted. Credit requested: NASA Worldview.",
+      "url": "https://wvs.earthdata.nasa.gov/api/v1/snapshot?REQUEST=GetSnapshot&TIME=2000-12-01&BBOX=35.5932%2C-111.6304%2C35.7668%2C-111.3096&CRS=EPSG%3A4326&LAYERS=Landsat_WELD_CorrectedReflectance_TrueColor_Global_Annual&WRAP=none&FORMAT=image%2Fjpeg&WIDTH=960&HEIGHT=640"
+    },
+    "cinder-lake-crater-field": {
+      "name": "Cinder Lake crater field",
+      "file": "cinder-lake-crater-field.jpg",
+      "source": "NASA Worldview Snapshots (NASA GIBS / EOSDIS)",
+      "layer": "Landsat_WELD_CorrectedReflectance_TrueColor_Global_Annual",
+      "layer_title": "Landsat WELD Corrected Reflectance, True Color (annual composite Dec 1999 – Nov 2000)",
+      "sensor": "Landsat 5 TM / Landsat 7 ETM+",
+      "date": "2000-12-01",
+      "resolution_m": 30,
+      "width_km": 29,
+      "bbox": [
+        35.2132,
+        -111.6596,
+        35.3868,
+        -111.3404
+      ],
+      "center": [
+        35.3,
+        -111.5
+      ],
+      "empty_fraction": 0,
+      "license": "Public domain: NASA/USGS imagery is not copyrighted. Credit requested: NASA Worldview.",
+      "url": "https://wvs.earthdata.nasa.gov/api/v1/snapshot?REQUEST=GetSnapshot&TIME=2000-12-01&BBOX=35.2132%2C-111.6596%2C35.3868%2C-111.3404&CRS=EPSG%3A4326&LAYERS=Landsat_WELD_CorrectedReflectance_TrueColor_Global_Annual&WRAP=none&FORMAT=image%2Fjpeg&WIDTH=960&HEIGHT=640"
+    },
+    "meteor-crater": {
+      "name": "Meteor Crater",
+      "file": "meteor-crater.jpg",
+      "source": "NASA Worldview Snapshots (NASA GIBS / EOSDIS)",
+      "layer": "Landsat_WELD_CorrectedReflectance_TrueColor_Global_Annual",
+      "layer_title": "Landsat WELD Corrected Reflectance, True Color (annual composite Dec 1999 – Nov 2000)",
+      "sensor": "Landsat 5 TM / Landsat 7 ETM+",
+      "date": "2000-12-01",
+      "resolution_m": 30,
+      "width_km": 29,
+      "bbox": [
+        34.9432,
+        -111.1791,
+        35.1168,
+        -110.8609
+      ],
+      "center": [
+        35.03,
+        -111.02
+      ],
+      "empty_fraction": 0,
+      "license": "Public domain: NASA/USGS imagery is not copyrighted. Credit requested: NASA Worldview.",
+      "url": "https://wvs.earthdata.nasa.gov/api/v1/snapshot?REQUEST=GetSnapshot&TIME=2000-12-01&BBOX=34.9432%2C-111.1791%2C35.1168%2C-110.8609&CRS=EPSG%3A4326&LAYERS=Landsat_WELD_CorrectedReflectance_TrueColor_Global_Annual&WRAP=none&FORMAT=image%2Fjpeg&WIDTH=960&HEIGHT=640"
+    },
+    "craters-of-the-moon-basalt-finesse": {
+      "name": "Craters of the Moon (BASALT/FINESSE)",
+      "file": "craters-of-the-moon-basalt-finesse.jpg",
+      "source": "NASA Worldview Snapshots (NASA GIBS / EOSDIS)",
+      "layer": "Landsat_WELD_CorrectedReflectance_TrueColor_Global_Annual",
+      "layer_title": "Landsat WELD Corrected Reflectance, True Color (annual composite Dec 1999 – Nov 2000)",
+      "sensor": "Landsat 5 TM / Landsat 7 ETM+",
+      "date": "2000-12-01",
+      "resolution_m": 30,
+      "width_km": 60,
+      "bbox": [
+        43.2403,
+        -113.891,
+        43.5997,
+        -113.149
+      ],
+      "center": [
+        43.42,
+        -113.52
+      ],
+      "empty_fraction": 0,
+      "license": "Public domain: NASA/USGS imagery is not copyrighted. Credit requested: NASA Worldview.",
+      "url": "https://wvs.earthdata.nasa.gov/api/v1/snapshot?REQUEST=GetSnapshot&TIME=2000-12-01&BBOX=43.2403%2C-113.891%2C43.5997%2C-113.149&CRS=EPSG%3A4326&LAYERS=Landsat_WELD_CorrectedReflectance_TrueColor_Global_Annual&WRAP=none&FORMAT=image%2Fjpeg&WIDTH=960&HEIGHT=640"
+    },
+    "mauna-kea-pisces-isru-tests": {
+      "name": "Mauna Kea (PISCES ISRU tests)",
+      "file": "mauna-kea-pisces-isru-tests.jpg",
+      "source": "NASA Worldview Snapshots (NASA GIBS / EOSDIS)",
+      "layer": "Landsat_WELD_CorrectedReflectance_TrueColor_Global_Annual",
+      "layer_title": "Landsat WELD Corrected Reflectance, True Color (annual composite Dec 1999 – Nov 2000)",
+      "sensor": "Landsat 5 TM / Landsat 7 ETM+",
+      "date": "2000-12-01",
+      "resolution_m": 30,
+      "width_km": 60,
+      "bbox": [
+        19.6403,
+        -155.7565,
+        19.9997,
+        -155.1835
+      ],
+      "center": [
+        19.82,
+        -155.47
+      ],
+      "empty_fraction": 0,
+      "license": "Public domain: NASA/USGS imagery is not copyrighted. Credit requested: NASA Worldview.",
+      "url": "https://wvs.earthdata.nasa.gov/api/v1/snapshot?REQUEST=GetSnapshot&TIME=2000-12-01&BBOX=19.6403%2C-155.7565%2C19.9997%2C-155.1835&CRS=EPSG%3A4326&LAYERS=Landsat_WELD_CorrectedReflectance_TrueColor_Global_Annual&WRAP=none&FORMAT=image%2Fjpeg&WIDTH=960&HEIGHT=640"
+    },
+    "mauna-loa-hi-seas": {
+      "name": "Mauna Loa (HI-SEAS)",
+      "file": "mauna-loa-hi-seas.jpg",
+      "source": "NASA Worldview Snapshots (NASA GIBS / EOSDIS)",
+      "layer": "Landsat_WELD_CorrectedReflectance_TrueColor_Global_Annual",
+      "layer_title": "Landsat WELD Corrected Reflectance, True Color (annual composite Dec 1999 – Nov 2000)",
+      "sensor": "Landsat 5 TM / Landsat 7 ETM+",
+      "date": "2000-12-01",
+      "resolution_m": 30,
+      "width_km": 60,
+      "bbox": [
+        19.4203,
+        -155.7861,
+        19.7797,
+        -155.2139
+      ],
+      "center": [
+        19.6,
+        -155.5
+      ],
+      "empty_fraction": 0,
+      "license": "Public domain: NASA/USGS imagery is not copyrighted. Credit requested: NASA Worldview.",
+      "url": "https://wvs.earthdata.nasa.gov/api/v1/snapshot?REQUEST=GetSnapshot&TIME=2000-12-01&BBOX=19.4203%2C-155.7861%2C19.7797%2C-155.2139&CRS=EPSG%3A4326&LAYERS=Landsat_WELD_CorrectedReflectance_TrueColor_Global_Annual&WRAP=none&FORMAT=image%2Fjpeg&WIDTH=960&HEIGHT=640"
+    },
+    "pavilion-lake-plrp": {
+      "name": "Pavilion Lake (PLRP)",
+      "file": "pavilion-lake-plrp.jpg",
+      "source": "NASA Worldview Snapshots (NASA GIBS / EOSDIS)",
+      "layer": "Landsat_WELD_CorrectedReflectance_TrueColor_Global_Annual",
+      "layer_title": "Landsat WELD Corrected Reflectance, True Color (annual composite Dec 1999 – Nov 2000)",
+      "sensor": "Landsat 5 TM / Landsat 7 ETM+",
+      "date": "2000-12-01",
+      "resolution_m": 30,
+      "width_km": 29,
+      "bbox": [
+        50.7832,
+        -121.9464,
+        50.9568,
+        -121.5336
+      ],
+      "center": [
+        50.87,
+        -121.74
+      ],
+      "empty_fraction": 0,
+      "license": "Public domain: NASA/USGS imagery is not copyrighted. Credit requested: NASA Worldview.",
+      "url": "https://wvs.earthdata.nasa.gov/api/v1/snapshot?REQUEST=GetSnapshot&TIME=2000-12-01&BBOX=50.7832%2C-121.9464%2C50.9568%2C-121.5336&CRS=EPSG%3A4326&LAYERS=Landsat_WELD_CorrectedReflectance_TrueColor_Global_Annual&WRAP=none&FORMAT=image%2Fjpeg&WIDTH=960&HEIGHT=640"
+    },
+    "sudbury-impact-structure": {
+      "name": "Sudbury impact structure",
+      "file": "sudbury-impact-structure.jpg",
+      "source": "NASA Worldview Snapshots (NASA GIBS / EOSDIS)",
+      "layer": "Landsat_WELD_CorrectedReflectance_TrueColor_Global_Annual",
+      "layer_title": "Landsat WELD Corrected Reflectance, True Color (annual composite Dec 1999 – Nov 2000)",
+      "sensor": "Landsat 5 TM / Landsat 7 ETM+",
+      "date": "2000-12-01",
+      "resolution_m": 30,
+      "width_km": 60,
+      "bbox": [
+        46.4203,
+        -81.5722,
+        46.7797,
+        -80.7878
+      ],
+      "center": [
+        46.6,
+        -81.18
+      ],
+      "empty_fraction": 0.01,
+      "license": "Public domain: NASA/USGS imagery is not copyrighted. Credit requested: NASA Worldview.",
+      "url": "https://wvs.earthdata.nasa.gov/api/v1/snapshot?REQUEST=GetSnapshot&TIME=2000-12-01&BBOX=46.4203%2C-81.5722%2C46.7797%2C-80.7878&CRS=EPSG%3A4326&LAYERS=Landsat_WELD_CorrectedReflectance_TrueColor_Global_Annual&WRAP=none&FORMAT=image%2Fjpeg&WIDTH=960&HEIGHT=640"
+    },
+    "el-pinacate": {
+      "name": "El Pinacate",
+      "file": "el-pinacate.jpg",
+      "source": "NASA Worldview Snapshots (NASA GIBS / EOSDIS)",
+      "layer": "Landsat_WELD_CorrectedReflectance_TrueColor_Global_Annual",
+      "layer_title": "Landsat WELD Corrected Reflectance, True Color (annual composite Dec 1999 – Nov 2000)",
+      "sensor": "Landsat 5 TM / Landsat 7 ETM+",
+      "date": "2000-12-01",
+      "resolution_m": 30,
+      "width_km": 60,
+      "bbox": [
+        31.5903,
+        -113.817,
+        31.9497,
+        -113.183
+      ],
+      "center": [
+        31.77,
+        -113.5
+      ],
+      "empty_fraction": 0,
+      "license": "Public domain: NASA/USGS imagery is not copyrighted. Credit requested: NASA Worldview.",
+      "url": "https://wvs.earthdata.nasa.gov/api/v1/snapshot?REQUEST=GetSnapshot&TIME=2000-12-01&BBOX=31.5903%2C-113.817%2C31.9497%2C-113.183&CRS=EPSG%3A4326&LAYERS=Landsat_WELD_CorrectedReflectance_TrueColor_Global_Annual&WRAP=none&FORMAT=image%2Fjpeg&WIDTH=960&HEIGHT=640"
+    },
+    "rio-tinto": {
+      "name": "Rio Tinto",
+      "file": "rio-tinto.jpg",
+      "source": "NASA Worldview Snapshots (NASA GIBS / EOSDIS)",
+      "layer": "Landsat_WELD_CorrectedReflectance_TrueColor_Global_Annual",
+      "layer_title": "Landsat WELD Corrected Reflectance, True Color (annual composite Dec 1999 – Nov 2000)",
+      "sensor": "Landsat 5 TM / Landsat 7 ETM+",
+      "date": "2000-12-01",
+      "resolution_m": 30,
+      "width_km": 29,
+      "bbox": [
+        37.6132,
+        -6.7646,
+        37.7868,
+        -6.4354
+      ],
+      "center": [
+        37.7,
+        -6.6
+      ],
+      "empty_fraction": 0,
+      "license": "Public domain: NASA/USGS imagery is not copyrighted. Credit requested: NASA Worldview.",
+      "url": "https://wvs.earthdata.nasa.gov/api/v1/snapshot?REQUEST=GetSnapshot&TIME=2000-12-01&BBOX=37.6132%2C-6.7646%2C37.7868%2C-6.4354&CRS=EPSG%3A4326&LAYERS=Landsat_WELD_CorrectedReflectance_TrueColor_Global_Annual&WRAP=none&FORMAT=image%2Fjpeg&WIDTH=960&HEIGHT=640"
+    },
+    "lanzarote-esa-pangaea": {
+      "name": "Lanzarote (ESA PANGAEA)",
+      "file": "lanzarote-esa-pangaea.jpg",
+      "source": "NASA Worldview Snapshots (NASA GIBS / EOSDIS)",
+      "layer": "Landsat_WELD_CorrectedReflectance_TrueColor_Global_Annual",
+      "layer_title": "Landsat WELD Corrected Reflectance, True Color (annual composite Dec 1999 – Nov 2000)",
+      "sensor": "Landsat 5 TM / Landsat 7 ETM+",
+      "date": "2000-12-01",
+      "resolution_m": 30,
+      "width_km": 60,
+      "bbox": [
+        28.8203,
+        -13.9081,
+        29.1797,
+        -13.2919
+      ],
+      "center": [
+        29,
+        -13.6
+      ],
+      "empty_fraction": 0,
+      "license": "Public domain: NASA/USGS imagery is not copyrighted. Credit requested: NASA Worldview.",
+      "url": "https://wvs.earthdata.nasa.gov/api/v1/snapshot?REQUEST=GetSnapshot&TIME=2000-12-01&BBOX=28.8203%2C-13.9081%2C29.1797%2C-13.2919&CRS=EPSG%3A4326&LAYERS=Landsat_WELD_CorrectedReflectance_TrueColor_Global_Annual&WRAP=none&FORMAT=image%2Fjpeg&WIDTH=960&HEIGHT=640"
+    },
+    "ries-crater-esa-pangaea": {
+      "name": "Ries crater (ESA PANGAEA)",
+      "file": "ries-crater-esa-pangaea.jpg",
+      "source": "NASA Worldview Snapshots (NASA GIBS / EOSDIS)",
+      "layer": "Landsat_WELD_CorrectedReflectance_TrueColor_Global_Annual",
+      "layer_title": "Landsat WELD Corrected Reflectance, True Color (annual composite Dec 1999 – Nov 2000)",
+      "sensor": "Landsat 5 TM / Landsat 7 ETM+",
+      "date": "2000-12-01",
+      "resolution_m": 30,
+      "width_km": 60,
+      "bbox": [
+        48.7003,
+        10.1502,
+        49.0597,
+        10.9698
+      ],
+      "center": [
+        48.88,
+        10.56
+      ],
+      "empty_fraction": 0,
+      "license": "Public domain: NASA/USGS imagery is not copyrighted. Credit requested: NASA Worldview.",
+      "url": "https://wvs.earthdata.nasa.gov/api/v1/snapshot?REQUEST=GetSnapshot&TIME=2000-12-01&BBOX=48.7003%2C10.1502%2C49.0597%2C10.9698&CRS=EPSG%3A4326&LAYERS=Landsat_WELD_CorrectedReflectance_TrueColor_Global_Annual&WRAP=none&FORMAT=image%2Fjpeg&WIDTH=960&HEIGHT=640"
+    },
+    "iceland-holuhraun": {
+      "name": "Iceland (Holuhraun)",
+      "file": "iceland-holuhraun.jpg",
+      "source": "NASA Worldview Snapshots (NASA GIBS / EOSDIS)",
+      "layer": "Landsat_WELD_CorrectedReflectance_TrueColor_Global_Annual",
+      "layer_title": "Landsat WELD Corrected Reflectance, True Color (annual composite Dec 1999 – Nov 2000)",
+      "sensor": "Landsat 5 TM / Landsat 7 ETM+",
+      "date": "2000-12-01",
+      "resolution_m": 30,
+      "width_km": 60,
+      "bbox": [
+        64.6703,
+        -17.4341,
+        65.0297,
+        -16.1659
+      ],
+      "center": [
+        64.85,
+        -16.8
+      ],
+      "empty_fraction": 0.04,
+      "license": "Public domain: NASA/USGS imagery is not copyrighted. Credit requested: NASA Worldview.",
+      "url": "https://wvs.earthdata.nasa.gov/api/v1/snapshot?REQUEST=GetSnapshot&TIME=2000-12-01&BBOX=64.6703%2C-17.4341%2C65.0297%2C-16.1659&CRS=EPSG%3A4326&LAYERS=Landsat_WELD_CorrectedReflectance_TrueColor_Global_Annual&WRAP=none&FORMAT=image%2Fjpeg&WIDTH=960&HEIGHT=640"
+    },
+    "svalbard-amase-bockfjorden": {
+      "name": "Svalbard (AMASE, Bockfjorden)",
+      "file": "svalbard-amase-bockfjorden.jpg",
+      "source": "NASA Worldview Snapshots (NASA GIBS / EOSDIS)",
+      "layer": "BlueMarble_NextGeneration",
+      "layer_title": "Blue Marble: Next Generation (cloud-free MODIS composite, 2004)",
+      "sensor": "Terra MODIS",
+      "date": "2004-08-01",
+      "resolution_m": 500,
+      "width_km": 480,
+      "bbox": [
+        77.9627,
+        1.5798,
+        80.8373,
+        25.0202
+      ],
+      "center": [
+        79.4,
+        13.3
+      ],
+      "empty_fraction": 0.06,
+      "license": "Public domain: NASA/USGS imagery is not copyrighted. Credit requested: NASA Worldview.",
+      "url": "https://wvs.earthdata.nasa.gov/api/v1/snapshot?REQUEST=GetSnapshot&TIME=2004-08-01&BBOX=77.9627%2C1.5798%2C80.8373%2C25.0202&CRS=EPSG%3A4326&LAYERS=BlueMarble_NextGeneration&WRAP=none&FORMAT=image%2Fjpeg&WIDTH=960&HEIGHT=640"
+    },
+    "pilbara-dresser-formation": {
+      "name": "Pilbara (Dresser Formation)",
+      "file": "pilbara-dresser-formation.jpg",
+      "source": "NASA Worldview Snapshots (NASA GIBS / EOSDIS)",
+      "layer": "Landsat_WELD_CorrectedReflectance_TrueColor_Global_Annual",
+      "layer_title": "Landsat WELD Corrected Reflectance, True Color (annual composite Dec 1999 – Nov 2000)",
+      "sensor": "Landsat 5 TM / Landsat 7 ETM+",
+      "date": "2000-12-01",
+      "resolution_m": 30,
+      "width_km": 60,
+      "bbox": [
+        -21.3797,
+        119.1109,
+        -21.0203,
+        119.6891
+      ],
+      "center": [
+        -21.2,
+        119.4
+      ],
+      "empty_fraction": 0,
+      "license": "Public domain: NASA/USGS imagery is not copyrighted. Credit requested: NASA Worldview.",
+      "url": "https://wvs.earthdata.nasa.gov/api/v1/snapshot?REQUEST=GetSnapshot&TIME=2000-12-01&BBOX=-21.3797%2C119.1109%2C-21.0203%2C119.6891&CRS=EPSG%3A4326&LAYERS=Landsat_WELD_CorrectedReflectance_TrueColor_Global_Annual&WRAP=none&FORMAT=image%2Fjpeg&WIDTH=960&HEIGHT=640"
+    },
+    "arkaroola": {
+      "name": "Arkaroola",
+      "file": "arkaroola.jpg",
+      "source": "NASA Worldview Snapshots (NASA GIBS / EOSDIS)",
+      "layer": "Landsat_WELD_CorrectedReflectance_TrueColor_Global_Annual",
+      "layer_title": "Landsat WELD Corrected Reflectance, True Color (annual composite Dec 1999 – Nov 2000)",
+      "sensor": "Landsat 5 TM / Landsat 7 ETM+",
+      "date": "2000-12-01",
+      "resolution_m": 30,
+      "width_km": 60,
+      "bbox": [
+        -30.4797,
+        138.9879,
+        -30.1203,
+        139.6121
+      ],
+      "center": [
+        -30.3,
+        139.3
+      ],
+      "empty_fraction": 0,
+      "license": "Public domain: NASA/USGS imagery is not copyrighted. Credit requested: NASA Worldview.",
+      "url": "https://wvs.earthdata.nasa.gov/api/v1/snapshot?REQUEST=GetSnapshot&TIME=2000-12-01&BBOX=-30.4797%2C138.9879%2C-30.1203%2C139.6121&CRS=EPSG%3A4326&LAYERS=Landsat_WELD_CorrectedReflectance_TrueColor_Global_Annual&WRAP=none&FORMAT=image%2Fjpeg&WIDTH=960&HEIGHT=640"
+    },
+    "qaidam-basin": {
+      "name": "Qaidam Basin",
+      "file": "qaidam-basin.jpg",
+      "source": "NASA Worldview Snapshots (NASA GIBS / EOSDIS)",
+      "layer": "Landsat_WELD_CorrectedReflectance_TrueColor_Global_Annual",
+      "layer_title": "Landsat WELD Corrected Reflectance, True Color (annual composite Dec 1999 – Nov 2000)",
+      "sensor": "Landsat 5 TM / Landsat 7 ETM+",
+      "date": "2000-12-01",
+      "resolution_m": 30,
+      "width_km": 60,
+      "bbox": [
+        37.3203,
+        92.6603,
+        37.6797,
+        93.3397
+      ],
+      "center": [
+        37.5,
+        93
+      ],
+      "empty_fraction": 0,
+      "license": "Public domain: NASA/USGS imagery is not copyrighted. Credit requested: NASA Worldview.",
+      "url": "https://wvs.earthdata.nasa.gov/api/v1/snapshot?REQUEST=GetSnapshot&TIME=2000-12-01&BBOX=37.3203%2C92.6603%2C37.6797%2C93.3397&CRS=EPSG%3A4326&LAYERS=Landsat_WELD_CorrectedReflectance_TrueColor_Global_Annual&WRAP=none&FORMAT=image%2Fjpeg&WIDTH=960&HEIGHT=640"
+    }
+  },
+  "missing": []
+}
