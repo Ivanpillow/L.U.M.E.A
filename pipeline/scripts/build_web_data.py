@@ -32,11 +32,13 @@ PROC = ROOT / "data" / "processed"
 WEB_DATA = ROOT / "web" / "public" / "data"
 MONTHLY = ["lowsun_days", "polarnight_days", "tmin_c", "t2m_c", "trange_c", "albedo"]
 STATIC = ["relief_m", "slope_p90_deg", "elev_mean_m", "maat_c", "precip_ann_mm",
-          "tmin_ann_c", "albedo_ann", "albedo_min", "wind_ann"]
+          "tmin_ann_c", "albedo_ann", "albedo_min", "wind_ann", "permafrost_pct", "permafrost_unc_pct"]
 UNITS = {"lowsun_days": "days", "polarnight_days": "days", "tmin_c": "°C", "t2m_c": "°C",
          "trange_c": "°C", "albedo": "", "relief_m": "m", "slope_p90_deg": "°",
          "elev_mean_m": "m", "maat_c": "°C", "precip_ann_mm": "mm/yr", "tmin_ann_c": "°C",
-         "albedo_ann": "", "albedo_min": "", "wind_ann": "m/s"}
+         "albedo_ann": "", "albedo_min": "", "wind_ann": "m/s", "permafrost_pct": "%",
+         "permafrost_unc_pct": "%"}
+WARM_NO_PERMAFROST_C = 3.0  # ver permafrost_features()
 NMS_KM = 300.0
 
 
@@ -81,11 +83,37 @@ def build_features():
             "albedo_min": np.nanmin(alb, axis=0),  # estación sin nieve = albedo del suelo
             "wind_ann": ann("WS10M"),
         }
+    feats.update(permafrost_features(ii, jj, feats["maat_c"]))
     return ii, jj, feats
 
 
-def resolve_args(profiles, feats):
-    """Sustituye 'pXX' por el percentil terrestre (sobre celdas de tierra y meses)."""
+def permafrost_features(ii, jj, maat):
+    """ESA CCI Permafrost v5.0 (ver fetch_cci_permafrost.py) por celda.
+
+    El producto solo trae píxeles dentro del dominio del permafrost (25–85° N, 60–85° S):
+    en tierras templadas (p. ej. Moscú, España) el archivo está vacío. Regla explícita:
+      - hay dato ESA                      -> se usa (con su incertidumbre publicada)
+      - sin dato y MAAT > +3 °C (POWER)    -> 0 % (permafrost físicamente inverosímil)
+      - sin dato y MAAT <= +3 °C           -> NaN = "No data" (alta montaña fuera de la
+                                              extensión, interior de mantos de hielo)
+    """
+    path = PROC / "permafrost_grid.npz"
+    n = ii.size
+    if not path.exists():
+        print("AVISO: falta permafrost_grid.npz (corre fetch_cci_permafrost.py); permafrost = sin dato")
+        return {"permafrost_pct": np.full(n, np.nan), "permafrost_unc_pct": np.full(n, np.nan)}
+    z = np.load(path)
+    pfr = z["pfr_pct"][ii, jj].astype(np.float64)
+    unc = z["pfr_unc_pct"][ii, jj].astype(np.float64)
+    warm = ~np.isfinite(pfr) & (maat > WARM_NO_PERMAFROST_C)
+    pfr[warm] = 0.0
+    return {"permafrost_pct": pfr, "permafrost_unc_pct": unc}
+
+
+def resolve_args(profiles, feats, area):
+    """Sustituye 'pXX' por el percentil terrestre PONDERADO POR ÁREA (sobre celdas de
+    tierra y, en features mensuales, celdas x meses). Sin ponderar, los polos pesan
+    de más porque sus celdas son más pequeñas."""
     resolved = json.loads(json.dumps(profiles))
     for prof in resolved:
         for p in prof["params"]:
@@ -93,7 +121,7 @@ def resolve_args(profiles, feats):
             out = []
             for a in p["args"]:
                 if isinstance(a, str) and a.startswith("p"):
-                    out.append(float(np.nanpercentile(vals, float(a[1:]))))
+                    out.append(scoring.weighted_percentile(vals, float(a[1:]), area))
                 else:
                     out.append(float(a))
             p["args_raw"] = p["args"]
@@ -156,9 +184,10 @@ def main():
     ii, jj, feats = build_features()
     lat, lon = grid.cell_center(ii, jj)
     n = ii.size
-    print(f"celdas de tierra: {n}")
+    area = grid.cell_area_km2(ii)
+    print(f"celdas de tierra: {n}  ({area.sum() / 1e6:.1f} M km²)")
 
-    profiles = resolve_args(cfg["profiles"], feats)
+    profiles = resolve_args(cfg["profiles"], feats, area)
 
     # Distancia de cada celda al análogo conocido más cercano (novedad)
     ks = known["sites"]
@@ -166,7 +195,10 @@ def main():
     dist_known = np.min(scoring.haversine_km(lat[:, None], lon[:, None], klat[None, :], klon[None, :]), axis=1)
 
     report = [f"# Reporte de validación ({date.today().isoformat()})", "",
-              f"Celdas de tierra puntuadas: **{n}**. Rejilla: POWER/MERRA-2 0.5° × 0.625°.", ""]
+              f"Celdas de tierra puntuadas: **{n}** ({area.sum() / 1e6:.1f} M km²). Rejilla: POWER/MERRA-2 0.5° × 0.625°.",
+              f"Percentiles ponderados por área de celda. Ranking solo con cobertura de datos ≥ "
+              f"{scoring.MIN_COVERAGE:.0%}.", ""]
+    land_km2 = float(area.sum())
     cache_path = PROC / "geocode_cache.json"
     cache = json.loads(cache_path.read_text(encoding="utf-8")) if cache_path.exists() else {}
     names = {}
@@ -176,11 +208,13 @@ def main():
     for prof in profiles:
         out = scoring.score_profile(feats, prof)
         best = out["best"]
-        # Percentil = % de celdas con score ESTRICTAMENTE menor (los empates no inflan el rango)
-        sorted_b = np.sort(np.nan_to_num(best, nan=-1))
-        rank_pct = np.searchsorted(sorted_b, np.nan_to_num(best, nan=-1), side="left") / n * 100
-        order = np.argsort(-np.nan_to_num(best, nan=-1))
+        ok_cov = scoring.eligible(out["coverage"])
+        # Percentil = % del ÁREA de tierra con score ESTRICTAMENTE menor (los empates no inflan el rango)
+        rank_pct = scoring.weighted_rank_pct(best, area)
+        # Ranking: solo celdas con datos suficientes
+        order = [int(t) for t in np.argsort(-np.nan_to_num(best, nan=-1)) if ok_cov[t]]
         top = nms(order, lat, lon, k=15)
+        n_lowcov_above = int(np.sum((np.nan_to_num(best) >= prof.get("analog_threshold", 0.6)) & ~ok_cov))
         prof["default_top"] = [f"{ii[t]}_{jj[t]}" for t in top]
 
         # Validación: positivos = análogos conocidos cuyo uso documentado coincide con el perfil
@@ -213,14 +247,21 @@ def main():
             union = base_set | s2
             jac.append(len(base_set & s2) / len(union) if union else 1.0)
 
+        analog_km2 = float(area[list(base_set)].sum()) if base_set else 0.0
+        analog_land_pct = analog_km2 / land_km2 * 100
         prof["validation"] = {"known_median_pct": None if np.isnan(med) else round(med, 1),
                                "tropics_pct": None if np.isnan(neg) else round(neg, 1),
                                "jaccard": round(float(np.mean(jac)), 3), "n_known": len(rows),
-                               "n_analog_cells": len(base_set)}
+                               "n_analog_cells": len(base_set),
+                               "analog_area_km2": round(analog_km2),
+                               "analog_land_pct": round(analog_land_pct, 2),
+                               "n_low_coverage_excluded": n_lowcov_above}
         report += [f"## {prof['label']} (`{prof['id']}`)", "",
-                   f"- Percentil mediano de los positivos conocidos (n={len(rows)}): **{med:.1f}** (100 = mejor)",
+                   f"- Percentil mediano de los positivos conocidos (n={len(rows)}, ponderado por área): **{med:.1f}** (100 = mejor)",
                    f"- Control negativo: % de celdas de trópico húmedo (precip > 2000 mm/año) en el conjunto análogo: **{neg:.1f} %** (ideal 0)",
-                   f"- Celdas en el conjunto análogo (best ≥ {thr}): **{len(base_set)}**",
+                   f"- Conjunto análogo (best ≥ {thr}): **{len(base_set)} celdas = {analog_km2 / 1e6:.2f} M km² "
+                   f"({analog_land_pct:.1f} % de la tierra firme)**",
+                   f"- Celdas sobre el umbral excluidas del ranking por cobertura < {scoring.MIN_COVERAGE:.0%}: **{n_lowcov_above}**",
                    f"- Estabilidad del conjunto análogo con pesos ±20 % (Jaccard medio, 50 réplicas): **{np.mean(jac):.2f}**",
                    "", "| Análogo conocido | Percentil | Score |", "|---|---|---|"]
         report += [f"| {r[0]} | {r[1]:.1f} | {r[2]:.2f} |" for r in rows]
@@ -234,7 +275,8 @@ def main():
             report.append(f"| {r} | {ii[t]}_{jj[t]} | {lat[t]:.2f}, {lon[t]:.2f} | {best[t]:.2f} | "
                           f"{int(out['months_analog'][t])} | {dist_known[t]:.0f} | {nm or ''} |")
         report.append("")
-        print(f"{prof['id']}: positivos p{med:.1f}, FP tropicos {neg:.1f}%, conjunto {len(base_set)} celdas, jaccard {np.mean(jac):.2f}")
+        print(f"{prof['id']}: positivos p{med:.1f}, FP tropicos {neg:.1f}%, conjunto {len(base_set)} celdas "
+              f"({analog_land_pct:.1f}% tierra), excl. cobertura {n_lowcov_above}, jaccard {np.mean(jac):.2f}")
 
     report += ["## Registro de calibración (honestidad metodológica)", "",
                "v0 (2026-11-14) falló en dos perfiles: la pendiente regional (píxel ~5 km, mediana terrestre 0.8°) "
@@ -267,7 +309,7 @@ def main():
         "grid": {"dlat": grid.DLAT, "dlon": grid.DLON, "nlat": grid.NLAT, "nlon": grid.NLON},
         "n": int(n), "features": fmeta, "profiles": profiles, "targets": cfg["targets"],
         "sources": cfg["sources"], "known": ks, "known_verified": bool(known.get("verified")),
-        "names": names, "nms_km": NMS_KM,
+        "names": names, "nms_km": NMS_KM, "min_coverage": scoring.MIN_COVERAGE,
     }
     def clean(o):  # JSON estricto: NaN/inf -> null (la web lo trata como dato faltante)
         if isinstance(o, float) and not np.isfinite(o):

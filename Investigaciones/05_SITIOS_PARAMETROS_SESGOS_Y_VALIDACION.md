@@ -176,5 +176,52 @@ Mueve cada peso ±20 % en la web. Si el top-10 cambia por completo, ese perfil *
 
 ---
 
+## 4.1 Corrección aplicada (2026-11-15): sesgos 2 y 5
+
+- **Sesgo 2 (área):** los umbrales `pXX` y los percentiles de validación ahora se ponderan por el área real de cada celda (`grid.cell_area_km2`, `scoring.weighted_percentile` y `scoring.weighted_rank_pct`). El reporte da el conjunto análogo en km² y en % de la tierra firme.
+- **Sesgo 5 (cobertura):** el ranking (Python y web) solo admite celdas con cobertura ≥ 75 % (`scoring.MIN_COVERAGE`). **Hoy no excluye ninguna celda**, porque todos los parámetros actuales tienen dato en casi toda la tierra. Es una salvaguarda para cuando se añadan datasets con huecos (EMIT, NDVI o permafrost).
+- Tests: 17 de Python + 5 de TypeScript, todos en verde.
+
+| Perfil | Positivos (antes → después) | Conjunto análogo (celdas) | % de la tierra firme |
+|---|---|---|---|
+| Low-sun navigation | p97 → p98.5 | 519 → 414 | 0.4 % |
+| Survive the cold & dark | p74 → **p92** | 15 777 → 21 026 | **11.6 %** (sigue siendo permisivo) |
+| Extreme-slope polar mobility | p94 → p95 | 1 344 → 1 703 | 3.2 % |
+| Frozen volatiles | p99 → p99.6 | 2 335 → 2 266 | 2.0 % |
+| Dust & regolith | p70 → **p58** ⚠️ | 5 074 → 5 498 | 13.0 % |
+| Mars ice-rich landing | p83 → p79 | 7 879 → 7 810 | 15.3 % |
+
+**Cómo leerlo:** antes, los polos "inflaban" la distribución terrestre de frío (había demasiadas celdas polares), así que "el 30 % más frío" era más frío de lo que corresponde por área. Al corregirlo, los umbrales de frío se relajan: *Survive the cold* gana celdas, pero sus análogos conocidos suben de p74 a p92. En cambio, el perfil de polvo **empeora** (p58). Sus positivos ya no son robustos y conviene revisar sus umbrales antes de presentarlo.
+
 ## 5. Resumen en una frase para el equipo
 > Comparamos la Tierra con **condiciones** del Polo Sur lunar (y, después, de las zonas de hielo de Marte), **no con una lista de puntos**. Cada perfil usa solo las dimensiones con dato global, los huecos bajan la confianza en vez de inventar ceros, y todo resultado se puede comprobar contra NASA POWER, Worldview o una calculadora antes de presentarlo.
+
+---
+
+## 7. ESA CCI integrado (2026-11-15) y accesibilidad de fuentes
+
+**Integrado:** ESA Permafrost_cci v5.0, extensión de permafrost 2023 (1 km, MODIS LST + CryoGrid), con su incertidumbre por píxel.
+- Hemisferio Norte doi:10.5285/d235665772ec4b558e9a89ac85595e71 · Antártida doi:10.5285/25447c253cbe435b937347756fe47146
+- Descarga directa y pública desde CEDA (sin registro): `pipeline/scripts/fetch_cci_permafrost.py` (12.9 MB en total) → `data/processed/permafrost_grid.npz`.
+- Reemplaza el proxy "MAAT < −2 °C" en `moon_volatiles` y añade "Ground ice" a `mars_ice_landing`. Rampa del 10 % al 90 % (clases IPA: esporádico → continuo).
+- **Regla de huecos:** el producto solo cubre el dominio del permafrost (25–85° N y 60–85° S). Si no hay píxel ESA y MAAT > +3 °C, se asigna 0 %. Si no hay píxel y hace frío (Andes altos, interior de mantos de hielo), queda como "no data".
+- La ficha web muestra "93 % ± 26 %" con la incertidumbre que publica la ESA.
+
+| Perfil | Antes (proxy) | Después (ESA CCI) |
+|---|---|---|
+| Volatiles: percentil de los positivos | p99.6 | p98.7 |
+| Volatiles: % de tierra marcada | 2.0 % | 3.6 % |
+| Mars ice: percentil de los positivos | p79 | **p96.6** |
+| Mars ice: % de tierra marcada | 15.3 % | **3.8 %** |
+
+**Accesibilidad de lo propuesto:**
+
+| Recurso | ¿Accesible? | Por qué / alternativa |
+|---|---|---|
+| CCI Data Bridge API | Sí, pero **no aporta datos** | Solo mapea relaciones CCI ↔ C3S/OSI SAF/CM SAF. Sus 236 entradas cubren 18 ECV (Soil Moisture, Sea Ice, Land Cover…) y **ninguna es Permafrost ni LST**. Nuestra trazabilidad se apoya en el DOI de CEDA. |
+| CEDA archive (Permafrost) | **Sí** | Ya integrado. |
+| CEDA archive (LST) | Sí, pero pesado | Global a 0.01°, un archivo por mes y sensor (cientos de MB). Para una climatología harían falta años de archivos. La temperatura mensual ya la da POWER; queda para después. |
+| esa-climate-toolbox | Instalable, pero no lo usamos | Se distribuye por conda y depende de xcube/xarray; el pipeline usa Python 3.14 + pip. Para 2 archivos NetCDF basta con `h5py`. |
+| cci-notebooks / ect-training | Repos públicos | Son material de referencia. Su lógica (leer NetCDF, recortar, promediar) ya está en el script. |
+| Backend FastAPI/Flask | No se adopta | La web es estática: el scoring corre en el navegador (espejo de Python). Un backend añade hosting y fallos sin dar una capacidad nueva. |
+| Siguiente candidato | Land Cover CCI (bare areas) | Reemplazaría el proxy "desierto = suelo desnudo". Está en Data Bridge y es público, pero es un mapa global de 300 m (~GB). |

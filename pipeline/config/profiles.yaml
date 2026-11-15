@@ -23,6 +23,8 @@ sources:
   power: {title: "NASA POWER Climatology API v2.10.1 (MERRA-2/CERES, 2001-2025)", url: "https://power.larc.nasa.gov/docs/"}
   terrain: {title: "AWS Terrain Tiles (SRTM/GMTED2010/ETOPO1), Terrarium encoding", url: "https://registry.opendata.aws/terrain-tiles/"}
   usgs_desert: {title: "USGS, What Is a Desert? (Meigs 1953: arid < 250 mm/yr, semiarid 250–500 mm/yr)", url: "https://pubs.usgs.gov/gip/deserts/what/"}
+  cci_permafrost: {title: "ESA Permafrost_cci v5.0 permafrost extent 2023 (MODIS LST + CryoGrid, 1 km), doi:10.5285/d235665772ec4b558e9a89ac85595e71 (N. Hemisphere), doi:10.5285/25447c253cbe435b937347756fe47146 (Antarctica)", url: "https://catalogue.ceda.ac.uk/uuid/d235665772ec4b558e9a89ac85595e71"}
+  ipa_classes: {title: "Brown et al. (2002) IPA Circum-Arctic Map of Permafrost: continuous > 90 %, discontinuous 50–90 %, sporadic 10–50 %", url: "https://nsidc.org/data/ggd318/versions/2"}
   sitesel: {title: "George et al. (2026) Artemis III Site Selection Update, LPSC, NTRS 20250011660", url: "https://ntrs.nasa.gov/citations/20250011660"}
 
 targets:
@@ -130,9 +132,9 @@ profiles:
       - {id: noice, feature: albedo_min, fn: ramp_down, args: [0.45, 0.7], gate: true, comparability: D, dimension: "Surface materials",
          label: "Not an ice sheet (snow-free-season albedo)", unit: "0–1", src: nssdc_moon, verified: true,
          why: "We want ice mixed in ground, not glaciers."}
-      - {id: permafrost, feature: maat_c, fn: ramp_down, args: [-10, -2], weight: 0.45, comparability: R, dimension: "Water & ice",
-         label: "Ground-ice likelihood (mean annual air temp)", unit: "°C", src: power, verified: false,
-         why: "Proxy: permafrost is common where mean annual air temperature is below about −2 °C. Replace with ESA CCI Permafrost."}
+      - {id: permafrost, feature: permafrost_pct, fn: ramp_up, args: [10, 90], weight: 0.45, comparability: R, dimension: "Water & ice",
+         label: "Permafrost (share of ground frozen year-round)", unit: "%", src: cci_permafrost, verified: true, unc_feature: permafrost_unc_pct,
+         why: "ESA satellite-model permafrost map (1 km). Ramp from sporadic (10 %) to continuous (90 %) permafrost (IPA classes). Lunar ice is in cold-trap regolith; Earth's analog is ice-cemented ground."}
       - {id: dry, feature: precip_ann_mm, fn: ramp_down, args: [250, 500], weight: 0.35, comparability: R, dimension: "Water & ice",
          label: "Polar-desert dryness", unit: "mm/yr", src: usgs_desert, verified: true, proxy: true,
          why: "Dry frozen ground keeps ice in the regolith-like soil rather than as snowpack."}
@@ -173,6 +175,9 @@ profiles:
       - {id: cold, feature: maat_c, fn: ramp_down, args: [-15, -2], weight: 0.3, comparability: R, dimension: "Water & ice",
          label: "Frozen ground (mean annual air temp)", unit: "°C", src: nssdc_mars, verified: false,
          why: "Mars averages −59 °C; we rank Earth's coldest ice-bearing ground (proxy)."}
+      - {id: groundice, feature: permafrost_pct, fn: ramp_up, args: [10, 90], weight: 0.25, comparability: R, dimension: "Water & ice",
+         label: "Ground ice (permafrost share)", unit: "%", src: cci_permafrost, verified: true, unc_feature: permafrost_unc_pct,
+         why: "SWIM targets buried ice; on Earth, ice-cemented permafrost is the closest analog (ESA CCI, 1 km)."}
       - {id: hyperarid, feature: precip_ann_mm, fn: ramp_down, args: [250, 500], weight: 0.3, comparability: R, dimension: "Water & ice",
          label: "Desert (cold or hot)", unit: "mm/yr", src: usgs_desert, verified: true, proxy: true,
          why: "No precipitation on Mars; ice is preserved under dry cover."}

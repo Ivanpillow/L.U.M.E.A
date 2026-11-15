@@ -1,207 +1,214 @@
-# Reporte de validación (2026-11-14)
+# Reporte de validación (2026-11-15)
 
-Celdas de tierra puntuadas: **62852**. Rejilla: POWER/MERRA-2 0.5° × 0.625°.
+Celdas de tierra puntuadas: **62852** (141.6 M km²). Rejilla: POWER/MERRA-2 0.5° × 0.625°.
+Percentiles ponderados por área de celda. Ranking solo con cobertura de datos ≥ 75%.
 
 ## Low-sun navigation & precision landing (`moon_lowsun_nav`)
 
-- Percentil mediano de los positivos conocidos (n=3): **97.0** (100 = mejor)
+- Percentil mediano de los positivos conocidos (n=3, ponderado por área): **98.5** (100 = mejor)
 - Control negativo: % de celdas de trópico húmedo (precip > 2000 mm/año) en el conjunto análogo: **0.0 %** (ideal 0)
-- Celdas en el conjunto análogo (best ≥ 0.6): **519**
+- Conjunto análogo (best ≥ 0.6): **414 celdas = 0.54 M km² (0.4 % de la tierra firme)**
+- Celdas sobre el umbral excluidas del ranking por cobertura < 75%: **0**
 - Estabilidad del conjunto análogo con pesos ±20 % (Jaccard medio, 50 réplicas): **0.78**
 
 | Análogo conocido | Percentil | Score |
 |---|---|---|
-| Haughton impact structure, Devon Island | 97.0 | 0.49 |
-| McMurdo Dry Valleys | 100.0 | 0.75 |
-| Svalbard (AMASE, Bockfjorden) | 67.2 | 0.24 |
+| Haughton impact structure, Devon Island | 98.5 | 0.49 |
+| McMurdo Dry Valleys | 99.9 | 0.73 |
+| Svalbard (AMASE, Bockfjorden) | 85.6 | 0.23 |
 
 Top candidatos (supresión de no-máximos a 300 km):
 
 | # | Celda | Lat, Lon | Score | Meses análogos | Dist. a análogo conocido (km) | Lugar |
 |---|---|---|---|---|---|---|
-| 1 | 33_551 | -73.50, 164.38 | 0.83 | 1 | 450 | Antarctica |
-| 2 | 24_544 | -78.00, 160.00 | 0.82 | 1 | 70 | Antarctica |
-| 3 | 310_517 | 65.00, 143.12 | 0.81 | 3 | 3594 | Sakha Republic, Russia |
-| 4 | 313_204 | 66.50, -52.50 | 0.80 | 3 | 1623 | Greenland |
-| 5 | 339_152 | 79.50, -85.00 | 0.78 | 1 | 119 | Nunavut, Canada |
-| 6 | 319_58 | 69.50, -143.75 | 0.78 | 1 | 1819 | Alaska, United States |
-| 7 | 307_54 | 63.50, -146.25 | 0.75 | 2 | 2014 | Alaska, United States |
-| 8 | 301_217 | 60.50, -44.38 | 0.75 | 1 | 1474 | Greenland |
-| 9 | 317_240 | 68.50, -30.00 | 0.75 | 2 | 707 | Greenland |
-| 10 | 303_45 | 61.50, -151.88 | 0.75 | 1 | 2178 | Alaska, United States |
-| 11 | 303_300 | 61.50, 7.50 | 0.75 | 1 | 1266 | Norway |
-| 12 | 313_231 | 66.50, -35.62 | 0.75 | 3 | 878 | Greenland |
-| 13 | 299_67 | 59.50, -138.12 | 0.75 | 1 | 1408 | Alaska, United States |
-| 14 | 304_84 | 62.00, -127.50 | 0.75 | 2 | 1286 | Northwest Territories, Canada |
-| 15 | 327_250 | 73.50, -23.75 | 0.72 | 2 | 999 | Greenland |
+| 1 | 33_551 | -73.50, 164.38 | 0.83 | 1 | 450 |  |
+| 2 | 24_549 | -78.00, 163.12 | 0.82 | 1 | 64 |  |
+| 3 | 310_517 | 65.00, 143.12 | 0.78 | 3 | 3594 |  |
+| 4 | 319_58 | 69.50, -143.75 | 0.78 | 1 | 1819 |  |
+| 5 | 313_204 | 66.50, -52.50 | 0.78 | 3 | 1623 |  |
+| 6 | 339_152 | 79.50, -85.00 | 0.76 | 1 | 119 |  |
+| 7 | 299_67 | 59.50, -138.12 | 0.75 | 1 | 1408 |  |
+| 8 | 307_55 | 63.50, -145.62 | 0.75 | 2 | 1988 |  |
+| 9 | 304_84 | 62.00, -127.50 | 0.75 | 2 | 1286 |  |
+| 10 | 300_43 | 60.00, -153.12 | 0.75 | 1 | 2196 |  |
+| 11 | 313_231 | 66.50, -35.62 | 0.75 | 3 | 878 |  |
+| 12 | 317_241 | 68.50, -29.38 | 0.75 | 2 | 684 |  |
+| 13 | 303_299 | 61.50, 6.88 | 0.74 | 1 | 1237 |  |
+| 14 | 301_217 | 60.50, -44.38 | 0.74 | 1 | 1474 |  |
+| 15 | 306_45 | 63.00, -151.88 | 0.71 | 2 | 2238 |  |
 
 ## Survive the cold & dark (`moon_night_survival`)
 
-- Percentil mediano de los positivos conocidos (n=3): **73.7** (100 = mejor)
+- Percentil mediano de los positivos conocidos (n=3, ponderado por área): **92.4** (100 = mejor)
 - Control negativo: % de celdas de trópico húmedo (precip > 2000 mm/año) en el conjunto análogo: **0.0 %** (ideal 0)
-- Celdas en el conjunto análogo (best ≥ 0.6): **15777**
+- Conjunto análogo (best ≥ 0.6): **21026 celdas = 16.42 M km² (11.6 % de la tierra firme)**
+- Celdas sobre el umbral excluidas del ranking por cobertura < 75%: **0**
 - Estabilidad del conjunto análogo con pesos ±20 % (Jaccard medio, 50 réplicas): **0.96**
 
 | Análogo conocido | Percentil | Score |
 |---|---|---|
-| Haughton impact structure, Devon Island | 74.2 | 0.58 |
-| Axel Heiberg Island (Expedition Fiord) | 73.7 | 0.58 |
-| McMurdo Dry Valleys | 72.7 | 0.55 |
+| Haughton impact structure, Devon Island | 92.8 | 0.81 |
+| Axel Heiberg Island (Expedition Fiord) | 92.4 | 0.80 |
+| McMurdo Dry Valleys | 91.8 | 0.78 |
 
 Top candidatos (supresión de no-máximos a 300 km):
 
 | # | Celda | Lat, Lon | Score | Meses análogos | Dist. a análogo conocido (km) | Lugar |
 |---|---|---|---|---|---|---|
-| 1 | 12_527 | -84.00, 149.38 | 1.00 | 5 | 752 | Antarctica |
-| 2 | 7_492 | -86.50, 127.50 | 1.00 | 7 | 1090 | Antarctica |
-| 3 | 39_456 | -70.50, 105.00 | 1.00 | 4 | 1811 | Antarctica |
-| 4 | 25_412 | -77.50, 77.50 | 1.00 | 4 | 1857 | Antarctica |
-| 5 | 34_474 | -73.00, 116.25 | 1.00 | 5 | 1340 | Antarctica |
-| 6 | 18_502 | -81.00, 133.75 | 1.00 | 6 | 689 | Antarctica |
-| 7 | 31_457 | -74.50, 105.62 | 1.00 | 4 | 1484 | Antarctica |
-| 8 | 33_494 | -73.50, 128.75 | 1.00 | 3 | 1004 | Antarctica |
-| 9 | 29_483 | -75.50, 121.88 | 1.00 | 4 | 1038 | Antarctica |
-| 10 | 32_511 | -74.00, 139.38 | 1.00 | 4 | 720 | Antarctica |
-| 11 | 17_312 | -81.50, 15.00 | 0.99 | 5 | 2240 | Antarctica |
-| 12 | 12_296 | -84.00, 5.00 | 0.99 | 5 | 2020 | Antarctica |
-| 13 | 2_102 | -89.00, -116.25 | 0.99 | 6 | 1379 | Antarctica |
-| 14 | 27_380 | -76.50, 57.50 | 0.98 | 4 | 2276 | Antarctica |
-| 15 | 7_225 | -86.50, -39.38 | 0.98 | 6 | 1758 | Antarctica |
+| 1 | 36_505 | -72.00, 135.62 | 1.00 | 5 | 966 |  |
+| 2 | 16_316 | -82.00, 17.50 | 1.00 | 6 | 2174 |  |
+| 3 | 11_522 | -84.50, 146.25 | 1.00 | 7 | 817 |  |
+| 4 | 29_484 | -75.50, 122.50 | 1.00 | 5 | 1023 |  |
+| 5 | 29_460 | -75.50, 107.50 | 1.00 | 4 | 1374 |  |
+| 6 | 23_297 | -78.50, 5.62 | 1.00 | 6 | 2610 |  |
+| 7 | 315_460 | 67.50, 107.50 | 1.00 | 3 | 2830 |  |
+| 8 | 19_261 | -80.50, -16.88 | 1.00 | 6 | 2446 |  |
+| 9 | 15_241 | -82.50, -29.38 | 1.00 | 6 | 2214 |  |
+| 10 | 7_480 | -86.50, 120.00 | 1.00 | 7 | 1130 |  |
+| 11 | 29_534 | -75.50, 153.75 | 1.00 | 4 | 305 |  |
+| 12 | 8_205 | -86.00, -51.88 | 1.00 | 7 | 1777 |  |
+| 13 | 27_402 | -76.50, 71.25 | 1.00 | 5 | 2047 |  |
+| 14 | 13_285 | -83.50, -1.88 | 1.00 | 7 | 2093 |  |
+| 15 | 15_129 | -82.50, -99.38 | 1.00 | 6 | 1724 |  |
 
 ## Extreme-slope polar mobility (`moon_polar_mobility`)
 
-- Percentil mediano de los positivos conocidos (n=3): **94.1** (100 = mejor)
-- Control negativo: % de celdas de trópico húmedo (precip > 2000 mm/año) en el conjunto análogo: **2.5 %** (ideal 0)
-- Celdas en el conjunto análogo (best ≥ 0.6): **1344**
-- Estabilidad del conjunto análogo con pesos ±20 % (Jaccard medio, 50 réplicas): **0.91**
+- Percentil mediano de los positivos conocidos (n=3, ponderado por área): **94.8** (100 = mejor)
+- Control negativo: % de celdas de trópico húmedo (precip > 2000 mm/año) en el conjunto análogo: **2.4 %** (ideal 0)
+- Conjunto análogo (best ≥ 0.6): **1703 celdas = 4.58 M km² (3.2 % de la tierra firme)**
+- Celdas sobre el umbral excluidas del ranking por cobertura < 75%: **0**
+- Estabilidad del conjunto análogo con pesos ±20 % (Jaccard medio, 50 réplicas): **0.92**
 
 | Análogo conocido | Percentil | Score |
 |---|---|---|
-| Haughton impact structure, Devon Island | 89.2 | 0.25 |
-| McMurdo Dry Valleys | 98.9 | 0.65 |
-| Svalbard (AMASE, Bockfjorden) | 94.1 | 0.40 |
+| Haughton impact structure, Devon Island | 90.2 | 0.34 |
+| McMurdo Dry Valleys | 98.7 | 0.71 |
+| Svalbard (AMASE, Bockfjorden) | 94.8 | 0.50 |
 
 Top candidatos (supresión de no-máximos a 300 km):
 
 | # | Celda | Lat, Lon | Score | Meses análogos | Dist. a análogo conocido (km) | Lugar |
 |---|---|---|---|---|---|---|
-| 1 | 274_436 | 47.00, 92.50 | 0.87 | 12 | 1057 | Khovd, Mongolia |
-| 2 | 249_413 | 34.50, 78.12 | 0.86 | 12 | 1377 | Ladakh, India |
-| 3 | 255_403 | 37.50, 71.88 | 0.86 | 12 | 1860 | Gorno-Badakhshan Autonomous Region, Tajikistan |
-| 4 | 120_176 | -30.00, -70.00 | 0.85 | 12 | 658 | Coquimbo Region, Chile |
-| 5 | 259_445 | 39.50, 98.12 | 0.85 | 12 | 498 | Gansu, China |
-| 6 | 252_101 | 36.00, -116.88 | 0.85 | 12 | 57 | California, United States |
-| 7 | 251_395 | 35.50, 66.88 | 0.85 | 12 | 2338 | Sar-e Pol Province, Afghanistan |
-| 8 | 255_410 | 37.50, 76.25 | 0.85 | 12 | 1476 | Xinjiang, China |
-| 9 | 252_418 | 36.00, 81.25 | 0.85 | 12 | 1059 | Xinjiang, China |
-| 10 | 168_161 | -6.00, -79.38 | 0.85 | 12 | 2250 | Lambayeque, Peru |
-| 11 | 266_439 | 43.00, 94.38 | 0.85 | 12 | 623 | Xinjiang, China |
-| 12 | 162_163 | -9.00, -78.12 | 0.85 | 12 | 1890 | Ancash, Peru |
-| 13 | 264_425 | 42.00, 85.62 | 0.85 | 12 | 804 | Xinjiang, China |
-| 14 | 154_166 | -13.00, -76.25 | 0.85 | 12 | 1400 | Lima, Peru |
-| 15 | 264_417 | 42.00, 80.62 | 0.85 | 12 | 1169 | Xinjiang, China |
+| 1 | 274_436 | 47.00, 92.50 | 0.96 | 12 | 1057 |  |
+| 2 | 250_412 | 35.00, 77.50 | 0.94 | 12 | 1416 |  |
+| 3 | 256_403 | 38.00, 71.88 | 0.94 | 12 | 1854 |  |
+| 4 | 267_432 | 43.50, 90.00 | 0.94 | 12 | 714 |  |
+| 5 | 264_416 | 42.00, 80.00 | 0.93 | 12 | 1217 |  |
+| 6 | 269_419 | 44.50, 81.88 | 0.92 | 12 | 1214 |  |
+| 7 | 252_419 | 36.00, 81.88 | 0.92 | 12 | 1004 |  |
+| 8 | 265_425 | 42.50, 85.62 | 0.92 | 12 | 838 |  |
+| 9 | 266_439 | 43.00, 94.38 | 0.92 | 12 | 623 |  |
+| 10 | 33_551 | -73.50, 164.38 | 0.92 | 12 | 450 |  |
+| 11 | 257_409 | 38.50, 75.62 | 0.91 | 12 | 1524 |  |
+| 12 | 116_176 | -32.00, -70.00 | 0.91 | 12 | 881 |  |
+| 13 | 258_447 | 39.00, 99.38 | 0.90 | 12 | 581 |  |
+| 14 | 256_428 | 38.00, 87.50 | 0.90 | 12 | 487 |  |
+| 15 | 251_395 | 35.50, 66.88 | 0.90 | 12 | 2338 |  |
 
 ## Frozen volatiles prospecting (ISRU) (`moon_volatiles`)
 
-- Percentil mediano de los positivos conocidos (n=4): **99.1** (100 = mejor)
+- Percentil mediano de los positivos conocidos (n=4, ponderado por área): **98.7** (100 = mejor)
 - Control negativo: % de celdas de trópico húmedo (precip > 2000 mm/año) en el conjunto análogo: **0.0 %** (ideal 0)
-- Celdas en el conjunto análogo (best ≥ 0.6): **2335**
-- Estabilidad del conjunto análogo con pesos ±20 % (Jaccard medio, 50 réplicas): **0.86**
+- Conjunto análogo (best ≥ 0.6): **3091 celdas = 5.09 M km² (3.6 % de la tierra firme)**
+- Celdas sobre el umbral excluidas del ranking por cobertura < 75%: **219**
+- Estabilidad del conjunto análogo con pesos ±20 % (Jaccard medio, 50 réplicas): **0.87**
 
 | Análogo conocido | Percentil | Score |
 |---|---|---|
-| Haughton impact structure, Devon Island | 98.6 | 0.73 |
-| Axel Heiberg Island (Expedition Fiord) | 99.8 | 0.93 |
-| McMurdo Dry Valleys | 99.6 | 0.88 |
-| Svalbard (AMASE, Bockfjorden) | 89.1 | 0.48 |
+| Haughton impact structure, Devon Island | 98.3 | 0.73 |
+| Axel Heiberg Island (Expedition Fiord) | 99.5 | 0.93 |
+| McMurdo Dry Valleys | 99.2 | 0.88 |
+| Svalbard (AMASE, Bockfjorden) | 96.4 | 0.60 |
 
 Top candidatos (supresión de no-máximos a 300 km):
 
 | # | Celda | Lat, Lon | Score | Meses análogos | Dist. a análogo conocido (km) | Lugar |
 |---|---|---|---|---|---|---|
-| 1 | 342_171 | 81.00, -73.12 | 1.00 | 12 | 377 | Nunavut, Canada |
-| 2 | 251_418 | 35.50, 81.25 | 1.00 | 12 | 1073 | Xinjiang, China |
-| 3 | 338_146 | 79.00, -88.75 | 1.00 | 12 | 62 | Nunavut, Canada |
-| 4 | 252_411 | 36.00, 76.88 | 1.00 | 12 | 1445 | Xinjiang, China |
-| 5 | 31_551 | -74.50, 164.38 | 1.00 | 12 | 341 | Antarctica |
-| 6 | 344_243 | 82.00, -28.12 | 0.98 | 12 | 777 | Greenland |
-| 7 | 343_202 | 81.50, -53.75 | 0.96 | 12 | 708 | Greenland |
-| 8 | 335_178 | 77.50, -68.75 | 0.96 | 12 | 530 | Greenland |
-| 9 | 325_202 | 72.50, -53.75 | 0.93 | 12 | 1131 | Greenland |
-| 10 | 323_244 | 71.50, -27.50 | 0.93 | 12 | 859 | Greenland |
-| 11 | 258_404 | 39.00, 72.50 | 0.92 | 12 | 1794 | Gorno-Badakhshan Autonomous Region, Tajikistan |
-| 12 | 326_159 | 73.00, -80.62 | 0.90 | 12 | 380 | Nunavut, Canada |
-| 13 | 334_250 | 77.00, -23.75 | 0.89 | 12 | 866 | Greenland |
-| 14 | 24_545 | -78.00, 160.62 | 0.88 | 12 | 62 | Antarctica |
-| 15 | 253_428 | 36.50, 87.50 | 0.87 | 12 | 501 | Xinjiang, China |
+| 1 | 254_408 | 37.00, 75.00 | 1.00 | 12 | 1592 |  |
+| 2 | 254_426 | 37.00, 86.25 | 1.00 | 12 | 600 |  |
+| 3 | 345_171 | 82.50, -73.12 | 1.00 | 12 | 459 |  |
+| 4 | 278_430 | 49.00, 88.75 | 1.00 | 12 | 1324 |  |
+| 5 | 252_415 | 36.00, 79.38 | 1.00 | 12 | 1224 |  |
+| 6 | 258_440 | 39.00, 95.00 | 1.00 | 12 | 241 |  |
+| 7 | 340_152 | 80.00, -85.00 | 1.00 | 12 | 133 |  |
+| 8 | 255_433 | 37.50, 90.62 | 1.00 | 12 | 210 |  |
+| 9 | 252_438 | 36.00, 93.75 | 1.00 | 12 | 180 |  |
+| 10 | 265_425 | 42.50, 85.62 | 1.00 | 12 | 838 |  |
+| 11 | 261_410 | 40.50, 76.25 | 1.00 | 12 | 1483 |  |
+| 12 | 247_413 | 33.50, 78.12 | 1.00 | 12 | 1416 |  |
+| 13 | 258_404 | 39.00, 72.50 | 1.00 | 12 | 1794 |  |
+| 14 | 273_436 | 46.50, 92.50 | 1.00 | 12 | 1002 |  |
+| 15 | 264_416 | 42.00, 80.00 | 1.00 | 12 | 1217 |  |
 
 ## Dust & regolith handling (`moon_dust_regolith`)
 
-- Percentil mediano de los positivos conocidos (n=4): **70.2** (100 = mejor)
+- Percentil mediano de los positivos conocidos (n=4, ponderado por área): **57.6** (100 = mejor)
 - Control negativo: % de celdas de trópico húmedo (precip > 2000 mm/año) en el conjunto análogo: **0.0 %** (ideal 0)
-- Celdas en el conjunto análogo (best ≥ 0.6): **5074**
+- Conjunto análogo (best ≥ 0.6): **5498 celdas = 18.35 M km² (13.0 % de la tierra firme)**
+- Celdas sobre el umbral excluidas del ranking por cobertura < 75%: **0**
 - Estabilidad del conjunto análogo con pesos ±20 % (Jaccard medio, 50 réplicas): **0.98**
 
 | Análogo conocido | Percentil | Score |
 |---|---|---|
-| Atacama Desert (Yungay) | 95.2 | 0.83 |
-| Death Valley | 75.6 | 0.35 |
-| Black Point Lava Flow (D-RATS) | 64.8 | 0.32 |
-| Mauna Kea (PISCES ISRU tests) | 22.5 | 0.06 |
+| Atacama Desert (Yungay) | 91.7 | 0.84 |
+| Death Valley | 58.1 | 0.37 |
+| Black Point Lava Flow (D-RATS) | 57.1 | 0.36 |
+| Mauna Kea (PISCES ISRU tests) | 9.8 | 0.12 |
 
 Top candidatos (supresión de no-máximos a 300 km):
 
 | # | Celda | Lat, Lon | Score | Meses análogos | Dist. a análogo conocido (km) | Lugar |
 |---|---|---|---|---|---|---|
-| 1 | 223_261 | 21.50, -16.88 | 0.95 | 12 | 897 | Dakhla-Oued Ed-Dahab, Morocco |
-| 2 | 218_318 | 19.00, 18.75 | 0.95 | 12 | 3217 | Tibesti, Chad |
-| 3 | 236_341 | 28.00, 33.12 | 0.94 | 12 | 3018 | Red Sea, Egypt |
-| 4 | 224_313 | 22.00, 15.62 | 0.94 | 12 | 2751 | Tibesti, Chad |
-| 5 | 244_386 | 32.00, 61.25 | 0.93 | 12 | 2950 | Farah Province, Afghanistan |
-| 6 | 266_434 | 43.00, 91.25 | 0.93 | 12 | 629 | Xinjiang, China |
-| 7 | 228_263 | 24.00, -15.62 | 0.93 | 12 | 591 | Sahrawi Arab Democratic Republic |
-| 8 | 252_425 | 36.00, 85.62 | 0.93 | 12 | 678 | Xinjiang, China |
-| 9 | 126_313 | -27.00, 15.62 | 0.93 | 12 | 6962 | Karas, Namibia |
-| 10 | 221_337 | 20.50, 30.62 | 0.92 | 12 | 3625 | Northern State, Sudan |
-| 11 | 235_294 | 27.50, 3.75 | 0.92 | 12 | 1490 | In Salah, Algeria |
-| 12 | 225_307 | 22.50, 11.88 | 0.92 | 12 | 2444 | Agadez Region, Niger |
-| 13 | 215_322 | 17.50, 21.25 | 0.91 | 12 | 3522 | Ennedi-Ouest, Chad |
-| 14 | 231_352 | 25.50, 40.00 | 0.91 | 12 | 3639 | Ḥa'il Province, Saudi Arabia |
-| 15 | 217_346 | 18.50, 36.25 | 0.91 | 12 | 4089 | Red Sea State, Sudan |
+| 1 | 217_318 | 18.50, 18.75 | 1.00 | 12 | 3257 |  |
+| 2 | 220_337 | 20.00, 30.62 | 1.00 | 12 | 3676 |  |
+| 3 | 225_312 | 22.50, 15.00 | 1.00 | 12 | 2667 |  |
+| 4 | 235_294 | 27.50, 3.75 | 1.00 | 12 | 1490 |  |
+| 5 | 227_266 | 23.50, -13.75 | 1.00 | 12 | 612 |  |
+| 6 | 221_262 | 20.50, -16.25 | 1.00 | 12 | 982 |  |
+| 7 | 236_341 | 28.00, 33.12 | 1.00 | 12 | 3018 |  |
+| 8 | 126_313 | -27.00, 15.62 | 1.00 | 12 | 6962 |  |
+| 9 | 266_434 | 43.00, 91.25 | 1.00 | 12 | 629 |  |
+| 10 | 225_307 | 22.50, 11.88 | 1.00 | 12 | 2444 |  |
+| 11 | 253_426 | 36.50, 86.25 | 1.00 | 12 | 610 |  |
+| 12 | 243_387 | 31.50, 61.88 | 1.00 | 12 | 2915 |  |
+| 13 | 231_352 | 25.50, 40.00 | 0.99 | 12 | 3639 |  |
+| 14 | 217_346 | 18.50, 36.25 | 0.99 | 12 | 4089 |  |
+| 15 | 232_273 | 26.00, -9.38 | 0.99 | 12 | 534 |  |
 
 ## Mars ice-rich landing zone (`mars_ice_landing`)
 
-- Percentil mediano de los positivos conocidos (n=4): **82.6** (100 = mejor)
+- Percentil mediano de los positivos conocidos (n=4, ponderado por área): **96.6** (100 = mejor)
 - Control negativo: % de celdas de trópico húmedo (precip > 2000 mm/año) en el conjunto análogo: **0.0 %** (ideal 0)
-- Celdas en el conjunto análogo (best ≥ 0.6): **7879**
-- Estabilidad del conjunto análogo con pesos ±20 % (Jaccard medio, 50 réplicas): **0.88**
+- Conjunto análogo (best ≥ 0.6): **3699 celdas = 5.35 M km² (3.8 % de la tierra firme)**
+- Celdas sobre el umbral excluidas del ranking por cobertura < 75%: **0**
+- Estabilidad del conjunto análogo con pesos ±20 % (Jaccard medio, 50 réplicas): **0.87**
 
 | Análogo conocido | Percentil | Score |
 |---|---|---|
-| Haughton impact structure, Devon Island | 99.8 | 0.88 |
-| Axel Heiberg Island (Expedition Fiord) | 83.1 | 0.54 |
-| McMurdo Dry Valleys | 82.1 | 0.53 |
-| Svalbard (AMASE, Bockfjorden) | 24.2 | 0.14 |
+| Haughton impact structure, Devon Island | 99.9 | 0.90 |
+| Axel Heiberg Island (Expedition Fiord) | 97.1 | 0.63 |
+| McMurdo Dry Valleys | 96.2 | 0.60 |
+| Svalbard (AMASE, Bockfjorden) | 60.9 | 0.30 |
 
 Top candidatos (supresión de no-máximos a 300 km):
 
 | # | Celda | Lat, Lon | Score | Meses análogos | Dist. a análogo conocido (km) | Lugar |
 |---|---|---|---|---|---|---|
-| 1 | 340_153 | 80.00, -84.38 | 0.99 | 12 | 144 | Nunavut, Canada |
-| 2 | 334_136 | 77.00, -95.00 | 0.98 | 12 | 229 | Nunavut, Canada |
-| 3 | 338_179 | 79.00, -68.12 | 0.95 | 12 | 472 | Greenland |
-| 4 | 330_109 | 75.00, -111.88 | 0.95 | 12 | 629 | Northwest Territories, Canada |
-| 5 | 333_94 | 76.50, -121.25 | 0.93 | 12 | 765 | Northwest Territories, Canada |
-| 6 | 345_249 | 82.50, -24.38 | 0.92 | 12 | 725 | Greenland |
-| 7 | 343_191 | 81.50, -60.62 | 0.92 | 12 | 595 | Greenland |
-| 8 | 326_89 | 73.00, -124.38 | 0.90 | 12 | 1067 | Northwest Territories, Canada |
-| 9 | 328_131 | 74.00, -98.12 | 0.90 | 12 | 291 | Nunavut, Canada |
-| 10 | 250_414 | 35.00, 78.75 | 0.88 | 12 | 1306 | Xinjiang, China |
-| 11 | 330_152 | 75.00, -85.00 | 0.86 | 12 | 140 | Nunavut, Canada |
-| 12 | 324_117 | 72.00, -106.88 | 0.86 | 12 | 652 | Nunavut, Canada |
-| 13 | 325_146 | 72.50, -88.75 | 0.86 | 12 | 322 | Nunavut, Canada |
-| 14 | 320_173 | 70.00, -71.88 | 0.84 | 12 | 833 | Nunavut, Canada |
-| 15 | 252_422 | 36.00, 83.75 | 0.84 | 12 | 840 | Xinjiang, China |
+| 1 | 335_148 | 77.50, -87.50 | 0.99 | 12 | 224 |  |
+| 2 | 336_127 | 78.00, -100.62 | 0.97 | 12 | 264 |  |
+| 3 | 338_179 | 79.00, -68.12 | 0.96 | 12 | 472 |  |
+| 4 | 330_109 | 75.00, -111.88 | 0.96 | 12 | 629 |  |
+| 5 | 341_144 | 80.50, -90.00 | 0.95 | 12 | 123 |  |
+| 6 | 333_94 | 76.50, -121.25 | 0.95 | 12 | 765 |  |
+| 7 | 345_245 | 82.50, -26.88 | 0.94 | 12 | 761 |  |
+| 8 | 343_191 | 81.50, -60.62 | 0.93 | 12 | 595 |  |
+| 9 | 326_89 | 73.00, -124.38 | 0.92 | 12 | 1067 |  |
+| 10 | 328_131 | 74.00, -98.12 | 0.92 | 12 | 291 |  |
+| 11 | 250_414 | 35.00, 78.75 | 0.90 | 12 | 1306 |  |
+| 12 | 324_117 | 72.00, -106.88 | 0.89 | 12 | 652 |  |
+| 13 | 325_146 | 72.50, -88.75 | 0.89 | 12 | 322 |  |
+| 14 | 252_422 | 36.00, 83.75 | 0.87 | 12 | 840 |  |
+| 15 | 320_173 | 70.00, -71.88 | 0.87 | 12 | 833 |  |
 
 ## Registro de calibración (honestidad metodológica)
 

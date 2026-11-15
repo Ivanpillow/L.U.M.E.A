@@ -15,10 +15,50 @@ Para cada celda c y mes m:
 
 Un dato faltante NO cuenta como 0: reduce la cobertura (confianza).
 Resumen anual: best = max_m score; months_analog = #{m : score ≥ umbral}.
+
+Ranking: solo entran celdas con coverage ≥ MIN_COVERAGE (una celda con pocos
+datos no puede subir gracias a un único parámetro).
+Percentiles: ponderados por el ÁREA de la celda (ver grid.cell_area_km2); un
+percentil por celda sobrerrepresenta los polos.
 """
 from __future__ import annotations
 
 import numpy as np
+
+MIN_COVERAGE = 0.75
+
+
+def weighted_percentile(values, q, weights):
+    """Percentil q (0-100) ponderado, método de CDF inversa: el menor valor x tal que
+    el peso acumulado de {v ≤ x} alcanza q % del peso total. Ignora NaN.
+    `weights` se difunde (broadcast) a la forma de `values`."""
+    v = np.asarray(values, dtype=np.float64)
+    w = np.broadcast_to(np.asarray(weights, dtype=np.float64), v.shape)
+    ok = np.isfinite(v) & (w > 0)
+    v, w = v[ok], w[ok]
+    if v.size == 0:
+        return float("nan")
+    order = np.argsort(v, kind="stable")
+    v, w = v[order], w[order]
+    cum = np.cumsum(w) / w.sum()
+    k = int(np.searchsorted(cum, q / 100.0 - 1e-12, side="left"))
+    return float(v[min(k, v.size - 1)])
+
+
+def weighted_rank_pct(score, weights):
+    """Para cada celda: % del peso (área) total con score ESTRICTAMENTE menor.
+    Las celdas sin score (NaN) cuentan como el mínimo."""
+    s = np.nan_to_num(np.asarray(score, dtype=np.float64), nan=-1.0)
+    w = np.asarray(weights, dtype=np.float64)
+    order = np.argsort(s, kind="stable")
+    ss, cw = s[order], np.concatenate([[0.0], np.cumsum(w[order])])
+    below = cw[np.searchsorted(ss, s, side="left")]
+    return below / w.sum() * 100.0
+
+
+def eligible(coverage, min_coverage: float = MIN_COVERAGE):
+    """Máscara de celdas con datos suficientes para entrar al ranking."""
+    return np.nan_to_num(np.asarray(coverage, dtype=np.float64)) >= min_coverage - 1e-9
 
 
 def membership(x, fn: str, params):

@@ -18,9 +18,10 @@ What makes it different:
 ## Run it
 
 ```bash
-python -m venv .venv && .venv/Scripts/python -m pip install numpy pillow pyyaml pytest   # Windows paths
+python -m venv .venv && .venv/Scripts/python -m pip install numpy pillow pyyaml pytest h5py   # Windows paths
 .venv/Scripts/python pipeline/scripts/fetch_terrain.py --zoom 5      # AWS Terrain Tiles -> terrain_grid.npz
 .venv/Scripts/python pipeline/scripts/fetch_power.py                 # NASA POWER climatology (~2,300 requests, ~20 min)
+.venv/Scripts/python pipeline/scripts/fetch_cci_permafrost.py       # ESA CCI Permafrost v5.0 (12.9 MB) -> permafrost_grid.npz
 .venv/Scripts/python pipeline/scripts/build_web_data.py --geocode    # features, scores, validation, web data
 .venv/Scripts/python -m pytest pipeline/tests
 cd web && npm install && npm test && npm run dev
