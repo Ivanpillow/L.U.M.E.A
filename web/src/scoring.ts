@@ -38,7 +38,11 @@ export interface GridScores {
   score: Float32Array;     // score del mes pedido o el mejor mes
   bestMonth: Int8Array;    // mes del mejor score (-1 sin dato)
   months: Uint8Array;      // nº de meses con score >= umbral
+  coverage: Float32Array;  // cobertura media de los 12 meses (igual que scoring.py)
 }
+
+/** Igual que scoring.MIN_COVERAGE en Python: el ranking ignora celdas con menos datos. */
+export const MIN_COVERAGE = 0.75;
 
 /** month = 0..11 o -1 para "mejor mes del año". */
 export function scoreGrid(n: number, get: FeatureGetter, params: Param[], weights: Record<string, number>,
@@ -46,10 +50,13 @@ export function scoreGrid(n: number, get: FeatureGetter, params: Param[], weight
   const score = new Float32Array(n);
   const bestMonth = new Int8Array(n);
   const months = new Uint8Array(n);
+  const coverage = new Float32Array(n);
   for (let c = 0; c < n; c++) {
-    let best = -1, bm = -1, cnt = 0, sel = NaN;
+    let best = -1, bm = -1, cnt = 0, sel = NaN, cov = 0;
     for (let m = 0; m < 12; m++) {
-      const s = scoreCellMonth(get, params, weights, c, m).score;
+      const r = scoreCellMonth(get, params, weights, c, m);
+      const s = r.score;
+      cov += r.coverage / 12;
       if (!Number.isNaN(s)) {
         if (s > best) { best = s; bm = m; }
         if (s >= threshold) cnt++;
@@ -59,8 +66,9 @@ export function scoreGrid(n: number, get: FeatureGetter, params: Param[], weight
     score[c] = month < 0 ? (bm < 0 ? NaN : best) : sel;
     bestMonth[c] = bm;
     months[c] = cnt;
+    coverage[c] = cov;
   }
-  return { score, bestMonth, months };
+  return { score, bestMonth, months, coverage };
 }
 
 export function haversineKm(lat1: number, lon1: number, lat2: number, lon2: number): number {
@@ -70,10 +78,13 @@ export function haversineKm(lat1: number, lon1: number, lat2: number, lon2: numb
   return 2 * r * Math.asin(Math.sqrt(Math.min(1, Math.max(0, a))));
 }
 
-/** Supresión de no-máximos: mejores celdas separadas al menos minKm. */
+/** Supresión de no-máximos: mejores celdas separadas al menos minKm.
+ *  Solo celdas con cobertura >= minCoverage (si se pasa `coverage`). */
 export function topCandidates(score: Float32Array, lat: Float32Array, lon: Float32Array,
-                              k: number, minKm: number): number[] {
-  const idx = Array.from(score.keys()).filter((i) => !Number.isNaN(score[i]));
+                              k: number, minKm: number,
+                              coverage?: Float32Array, minCoverage = MIN_COVERAGE): number[] {
+  const idx = Array.from(score.keys()).filter((i) => !Number.isNaN(score[i])
+    && (!coverage || coverage[i] >= minCoverage - 1e-6));
   idx.sort((a, b) => score[b] - score[a]);
   const picked: number[] = [];
   for (const i of idx) {

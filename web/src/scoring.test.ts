@@ -40,3 +40,13 @@ test("calendar counts months", () => {
 });
 
 test("haversine", () => assert.ok(Math.abs(haversineKm(0, 0, 0, 1) - 111.2) < 0.5));
+
+test("grid coverage and ranking skip low-coverage cells", async () => {
+  const { topCandidates } = await import("./scoring.ts");
+  const f: Record<string, number[]> = { fa: [NaN, 1], fb: [1, NaN], fg: [1, 1] };
+  const out = scoreGrid(2, (name, c) => f[name][c], params, {}, 0.6, -1);
+  close(out.coverage[0], 0.75); close(out.coverage[1], 0.25);
+  const lat = new Float32Array([0, 50]), lon = new Float32Array([0, 50]);
+  assert.deepEqual(topCandidates(out.score, lat, lon, 5, 100, out.coverage), [0]);
+  assert.equal(topCandidates(out.score, lat, lon, 5, 100).length, 2);
+});

@@ -2,7 +2,7 @@ import maplibregl from "maplibre-gl";
 import "maplibre-gl/dist/maplibre-gl.css";
 import "./style.css";
 import { cellRing, fmtLatLon, loadDataset, type Dataset } from "./data.ts";
-import { haversineKm, membership, scoreCellMonth, scoreGrid, topCandidates, type GridScores } from "./scoring.ts";
+import { MIN_COVERAGE, haversineKm, membership, scoreCellMonth, scoreGrid, topCandidates, type GridScores } from "./scoring.ts";
 import type { Fact, Param, Profile } from "./types.ts";
 import type { Feature, FeatureCollection } from "geojson";
 
@@ -53,6 +53,13 @@ function fmtVal(p: Param, x: number): string {
   if (Number.isNaN(x)) return "no data";
   const digits = p.unit === "0–1" ? 2 : Math.abs(x) < 10 ? 1 : 0;
   return `${x.toFixed(digits)} ${p.unit}`.trim();
+}
+
+/** "± 12 %" con la incertidumbre que publica la propia fuente (ESA CCI), si existe. */
+function uncText(p: Param, c: number, m: number): string {
+  if (!p.unc_feature || !d.m.features[p.unc_feature]) return "";
+  const u = d.get(p.unc_feature, c, m);
+  return Number.isNaN(u) ? "" : ` ± ${u.toFixed(0)} ${p.unit}`;
 }
 
 // ------------------------------------------------------------------ sidebar
@@ -127,8 +134,9 @@ function renderWeights() {
 
 function renderCandidates() {
   const prof = profile();
-  const top = topCandidates(scores.score, d.lat, d.lon, 12, d.m.nms_km);
-  $("#cand-hint").textContent = `≥ ${d.m.nms_km} km apart`;
+  const minCov = d.m.min_coverage ?? MIN_COVERAGE;
+  const top = topCandidates(scores.score, d.lat, d.lon, 12, d.m.nms_km, scores.coverage, minCov);
+  $("#cand-hint").textContent = `≥ ${d.m.nms_km} km apart · data coverage ≥ ${(minCov * 100).toFixed(0)}%`;
   $("#cands").innerHTML = top.map((c, r) => {
     const nk = nearestKnown(c);
     const nov = nk.km > NEW_KM ? `<span class="badge new" title="Farther than ${NEW_KM} km from any known analog in our baseline">NEW</span>` : `near ${esc(nk.name)}`;
@@ -172,7 +180,7 @@ function renderCard(c: number) {
   });
   const row = (r: { p: Param; x: number; s: number }) => `<div class="row">
       <span>${r.p.gate ? "Required: " : ""}${esc(r.p.label)} ${paramBadges(r.p)}</span>
-      <span class="val">${fmtVal(r.p, r.x)} · ${Number.isNaN(r.s) ? "–" : r.s.toFixed(2)}</span>
+      <span class="val">${fmtVal(r.p, r.x)}${uncText(r.p, c, showM)} · ${Number.isNaN(r.s) ? "–" : r.s.toFixed(2)}</span>
       <div class="meter"><i style="width:${Number.isNaN(r.s) ? 0 : r.s * 100}%"></i></div>
       <span class="why">${esc(r.p.why)} ${srcLink(r.p.src)}</span></div>`;
   const group = (cls: string, title: string, list: typeof rows) =>
@@ -215,19 +223,19 @@ function renderMethod() {
   const dlg = $<HTMLDialogElement>("#method");
   const val = d.m.profiles.map((p) => p.validation ? `<tr><td>${esc(p.label)}</td>
       <td>${p.validation.known_median_pct?.toFixed(0) ?? "–"} (n=${p.validation.n_known})</td>
-      <td>${p.validation.tropics_pct?.toFixed(1) ?? "–"}%</td><td>${p.validation.jaccard.toFixed(2)}</td></tr>` : "").join("");
+      <td>${p.validation.tropics_pct?.toFixed(1) ?? "–"}%</td><td>${p.validation.analog_land_pct?.toFixed(1) ?? "–"}%</td><td>${p.validation.jaccard.toFixed(2)}</td></tr>` : "").join("");
   dlg.innerHTML = `<h3>Method, limits &amp; sources</h3>
   <p><b>Proving Grounds</b> turns NASA's own Moon Base capability gaps (2026) into <i>test profiles</i>, and searches every land cell on Earth for places — and months — that reproduce the physical conditions each test needs.</p>
   <h4>Model</h4>
   <p>Each criterion maps a measured value to a 0–1 membership <code>s</code> (ramp or band). For cell <i>c</i> and month <i>m</i>:
-  <code>score = (Σ w·s / Σ w) × Π s<sub>required</sub></code>. Missing data lowers <i>coverage</i>, never the score. The calendar repeats this for each month.</p>
+  <code>score = (Σ w·s / Σ w) × Π s<sub>required</sub></code>. Missing data lowers <i>coverage</i>, never the score; cells below ${((d.m.min_coverage ?? MIN_COVERAGE) * 100).toFixed(0)}% coverage are kept off the candidate ranking. Percentile thresholds (pXX) are weighted by cell area, so small high-latitude cells do not over-count the poles. The calendar repeats this for each month.</p>
   <h4>Comparability</h4>
   <ul><li><span class="badge D">D</span> Direct — same physical quantity, comparable in value (e.g., Sun elevation, albedo).</li>
   <li><span class="badge R">R</span> Relative — Earth cannot reach Moon/Mars values; we rank Earth's extremes (percentiles).</li>
   <li><span class="badge N">N</span> Never analog — gravity, vacuum/thin CO₂ air, radiation. Shown on every site card.</li>
   <li><span class="badge proxy">proxy</span> Indirect indicator (e.g., desert climate as a stand-in for bare ground). <span class="badge proxy">unverified</span> threshold still pending a primary source.</li></ul>
   <h4>Validation (percentile 100 = best)</h4>
-  <table><tr><th>Profile</th><th>Documented analogs (positives), median pct.</th><th>Humid tropics flagged analog (neg. control, ideal 0%)</th><th>Analog-set stability (Jaccard), ±20% weights</th></tr>${val}</table>
+  <table><tr><th>Profile</th><th>Documented analogs (positives), median pct.</th><th>Humid tropics flagged analog (neg. control, ideal 0%)</th><th>Share of Earth's land area flagged analog</th><th>Analog-set stability (Jaccard), ±20% weights</th></tr>${val}</table>
   <h4>Limits</h4>
   <ul>
     <li>Cells are 0.5° × 0.625° (~55 × 69 km at the equator): screening, not site certification. Small craters and lava tubes are not resolved.</li>
@@ -235,7 +243,7 @@ function renderMethod() {
     <li>Terrain tiles stop at 85°: the Antarctic interior has climate but no relief.</li>
     <li>Temperature is 2 m air temperature (MERRA-2 reanalysis), not surface temperature.</li>
     <li>Earth's sky scatters light into shadows; lunar shadows are pitch-black. The lighting analogy is geometric, not radiometric.</li>
-    <li>Bare-ground and permafrost criteria use climate proxies (flagged <span class="badge proxy">proxy</span>).</li>
+    <li>Bare-ground criteria use a climate proxy (flagged <span class="badge proxy">proxy</span>). Permafrost comes from ESA CCI Permafrost v5.0 (2023, 1 km) with ESA's published per-pixel uncertainty (shown as ±). That product only maps the permafrost domain (25–85° N, 60–85° S): warm land with no ESA pixel (mean air temp &gt; +3 °C) is set to 0 %; cold land with no ESA pixel (e.g., high Andes) is "no data".</li>
     <li>Known-analog baseline: ${d.m.known.length} curated sites with approximate coordinates${d.m.known_verified ? "" : " (to be replaced by the USGS layer, doi:10.5066/P9J72921)"}.</li>
   </ul>
   <h4>Data &amp; sources</h4>

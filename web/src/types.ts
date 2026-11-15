@@ -15,6 +15,8 @@ export interface Param {
   src: string;
   verified: boolean;
   proxy?: boolean;
+  /** feature con la incertidumbre publicada por la fuente (misma unidad), p. ej. ESA CCI */
+  unc_feature?: string;
   why: string;
 }
 
@@ -24,6 +26,9 @@ export interface Validation {
   jaccard: number;
   n_known: number;
   n_analog_cells?: number;
+  analog_area_km2?: number;
+  analog_land_pct?: number;
+  n_low_coverage_excluded?: number;
 }
 
 export interface Profile {
@@ -64,4 +69,5 @@ export interface Manifest {
   known_verified: boolean;
   names: Record<string, string>;
   nms_km: number;
+  min_coverage?: number;
 }
