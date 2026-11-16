@@ -3,7 +3,6 @@
 import { closeOnBackdrop, esc } from "./dom.ts";
 import { UI } from "./icons.ts";
 import { t } from "./i18n.ts";
-import type { KnownSite } from "./types.ts";
 
 export interface PhotoCredit {
   name: string;
@@ -19,16 +18,17 @@ export interface PhotoCredit {
   url: string;
 }
 
-export function openPhoto(site: KnownSite, p: PhotoCredit) {
+/** `coordsNote`: de dónde sale la coordenada en la que se centra la imagen (aproximada o capa USGS). */
+export function openPhoto(name: string, p: PhotoCredit, coordsNote: string) {
   const dlg = document.createElement("dialog");
   dlg.className = "photo";
   dlg.setAttribute("aria-labelledby", "photo-title");
   dlg.innerHTML = `<figure class="photo-in">
     <button type="button" class="close" aria-label="${esc(t("photo.close"))}">${UI.cross}</button>
-    <img src="img/sites/${esc(p.file)}" alt="${esc(t("photo.alt", { name: site.name }))}" width="960" height="640" decoding="async" />
+    <img src="img/sites/${esc(p.file)}" alt="${esc(t("photo.alt", { name }))}" width="960" height="640" decoding="async" />
     <figcaption>
-      <b id="photo-title">${esc(site.name)}</b>
-      <span>${esc(t("photo.frame", { km: p.width_km, res: p.resolution_m }))} · ${esc(t("known.approx"))}</span>
+      <b id="photo-title">${esc(name)}</b>
+      <span>${esc(t("photo.frame", { km: p.width_km, res: p.resolution_m }))} · ${esc(coordsNote)}</span>
       <span class="credit">${esc(t("photo.credit"))} <a href="${esc(p.url)}" target="_blank" rel="noopener">${esc(p.source)}</a> ·
         ${esc(p.layer_title)} · ${esc(p.sensor)} · ${esc(t("photo.license"))}</span>
     </figcaption></figure>`;

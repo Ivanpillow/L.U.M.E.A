@@ -7,16 +7,17 @@
      verde / amarillo / rojo = SOLO analogía fuerte / parcial / rota (siempre con icono + texto) */
 :root {
   /* paleta base */
-  --navy-900: #0B132B;
-  --navy-700: #1C2541;
+  --navy-900: #06080E;
+  --navy-700: #131926;
   --slate-500: #3A506B;
   --sky-400: #5BC0DE;
   --sand-200: #F4D6B0;
   --amber-600: #D97706;
-  /* derivados de la paleta (misma familia de tono) */
-  --navy-950: #070C1D;
-  --navy-800: #131B36;
-  --slate-700: #2A3A56;
+  /* superficies: negro casi puro, como la primera versión (petición del equipo). Los dos azules de la
+     paleta quedan como tinte de las superficies elevadas; los acentos de la paleta no cambian. */
+  --navy-950: #000000;
+  --navy-800: #0B0F18;
+  --slate-700: #222B3D;
   --slate-300: #9FB0C6;
   --slate-100: #E6ECF4;
   --sand-50: #FFF6E5;
@@ -37,11 +38,11 @@
   --ok: #5FD6A2;
   --partial: #F7C948;
   --broken: #FF8E85;
-  /* rampa del mapa (score 0,25 → 1): frío = poco análogo, cálido y claro = muy análogo */
-  --ramp-0: #3A506B;
-  --ramp-1: #D97706;
-  --ramp-2: #F4D6B0;
-  --ramp-3: #FFF6E5;
+  /* mapa de calor (score 0,30 → 1): rosado = parcial, rojo → naranja → naranja claro = análogo */
+  --ramp-0: #F06AA8;
+  --ramp-1: #E11D48;
+  --ramp-2: #F97316;
+  --ramp-3: #FFC56B;
   /* tipografía */
   --font-display: "Sora", "Segoe UI", system-ui, sans-serif;
   --font-text: "IBM Plex Sans", "Segoe UI", system-ui, sans-serif;
@@ -53,11 +54,16 @@
   --fs-2xl: 1.4375rem;
   --fs-3xl: 1.75rem;
   /* forma y movimiento */
-  --r-sm: 8px;
-  --r-md: 12px;
-  --r-lg: 18px;
+  --r-sm: 6px;
+  --r-md: 9px;
+  --r-lg: 14px;
+  --r-btn: 9px;
   --r-pill: 999px;
-  --shadow: 0 14px 36px rgba(3, 6, 16, .6);
+  /* profundidad: luz desde arriba (brillo en el borde superior) y sombra en dos capas */
+  --sheen: linear-gradient(180deg, rgba(255, 255, 255, .06), rgba(255, 255, 255, 0) 60%);
+  --lift-1: inset 0 1px 0 rgba(255, 255, 255, .07), 0 1px 2px rgba(0, 0, 0, .7), 0 6px 14px rgba(0, 0, 0, .4);
+  --lift-2: inset 0 1px 0 rgba(255, 255, 255, .08), 0 2px 6px rgba(0, 0, 0, .7), 0 22px 54px rgba(0, 0, 0, .7);
+  --shadow: var(--lift-2);
   --ease: cubic-bezier(.16, 1, .3, 1);
   color-scheme: dark;
 }
@@ -76,11 +82,16 @@ svg { display: block; }
 
 /* ---------------------------------------------------------------- estructura */
 #app { position: relative; display: grid; grid-template-columns: 380px 1fr; height: 100vh; }
-#panel { background: var(--bg); border-right: 1px solid var(--line); overflow-y: auto; padding: 20px 20px 28px; }
-#map { position: relative; min-height: 300px; background: var(--navy-950); }
-/* un único gesto atmosférico, tomado de la IMAGEN 1: luz cálida a un lado, fría al otro, detrás del globo */
-#map::before { content: ""; position: absolute; inset: 0; pointer-events: none;
-  background: radial-gradient(42% 60% at 0% 55%, rgba(217, 119, 6, .16), transparent 70%), radial-gradient(42% 60% at 100% 45%, rgba(91, 192, 222, .16), transparent 70%); }
+#panel { position: relative; z-index: 2; background: linear-gradient(180deg, #0B0E16, var(--bg) 260px); border-right: 1px solid var(--line); box-shadow: 16px 0 44px rgba(0, 0, 0, .6); overflow-y: auto; padding: 20px 20px 28px; }
+/* espacio negro con estrellas fijas y tenues (tres mallas de distinto paso para que no se note el patrón) */
+#map { position: relative; min-height: 300px; background:
+  radial-gradient(1px 1px at 40px 60px, rgba(255, 255, 255, .7) 50%, transparent 51%) 0 0 / 331px 331px,
+  radial-gradient(1px 1px at 210px 150px, rgba(255, 255, 255, .45) 50%, transparent 51%) 0 0 / 331px 331px,
+  radial-gradient(1px 1px at 120px 280px, rgba(200, 220, 255, .55) 50%, transparent 51%) 0 0 / 457px 457px,
+  radial-gradient(1px 1px at 390px 90px, rgba(255, 255, 255, .4) 50%, transparent 51%) 0 0 / 457px 457px,
+  radial-gradient(1.5px 1.5px at 300px 420px, rgba(255, 240, 220, .6) 50%, transparent 51%) 0 0 / 613px 613px,
+  radial-gradient(1px 1px at 520px 200px, rgba(255, 255, 255, .45) 50%, transparent 51%) 0 0 / 613px 613px,
+  #000; }
 #map canvas { transition: opacity .25s var(--ease); }
 #map.updating canvas { opacity: .55; transition: none; }
 #app:not(.has-mode) .needs-mode { visibility: hidden; }
@@ -243,7 +254,7 @@ section:has(> #specs) { margin-top: 22px; }
 .light.broken { color: var(--broken); }
 .light.nodata { color: var(--muted); }
 
-#tip { position: fixed; inset: auto; margin: 0; max-width: min(300px, calc(100vw - 16px)); padding: 8px 12px; border-radius: var(--r-sm); border: 1px solid var(--line-strong); background: var(--navy-700); color: var(--text); font: 400 var(--fs-xs)/1.45 var(--font-text); box-shadow: 0 8px 20px rgba(3, 6, 16, .55); pointer-events: none; z-index: 50; }
+#tip { position: fixed; inset: auto; margin: 0; max-width: min(300px, calc(100vw - 16px)); padding: 8px 12px; border-radius: var(--r-sm); border: 1px solid var(--line-strong); background: var(--navy-700); color: var(--text); font: 400 var(--fs-xs)/1.45 var(--font-text); box-shadow: 0 8px 20px rgba(0, 0, 0, .55); pointer-events: none; z-index: 50; }
 #tip[hidden] { display: none; }
 
 /* ---------------------------------------------------------------- mapa */
@@ -256,15 +267,15 @@ section:has(> #specs) { margin-top: 22px; }
 #map .maplibregl-ctrl-group button + button { border-top: 1px solid var(--line); }
 #map .maplibregl-ctrl-group button:hover { background-color: var(--navy-700); }
 #map .maplibregl-ctrl-group .maplibregl-ctrl-icon { filter: invert(1) sepia(.35) saturate(1.6) hue-rotate(165deg) brightness(.95); }
-#map .maplibregl-ctrl-attrib { background: rgba(11, 19, 43, .85); color: var(--muted); font: 400 .6875rem/1.4 var(--font-text); border-radius: var(--r-pill); }
+#map .maplibregl-ctrl-attrib { background: rgba(8, 11, 18, .85); color: var(--muted); font: 400 .6875rem/1.4 var(--font-text); border-radius: var(--r-pill); }
 #map .maplibregl-ctrl-attrib a { color: var(--muted); }
 #map .maplibregl-ctrl-attrib-button { filter: invert(1) brightness(.8); background-color: transparent; }
 
-.legend { position: absolute; left: 396px; bottom: 16px; z-index: 2; background: rgba(11, 19, 43, .9); border: 1px solid var(--line); border-radius: var(--r-md); padding: 10px 12px; font-size: var(--fs-xs); color: var(--muted); }
+.legend { position: absolute; left: 396px; bottom: 16px; z-index: 2; background: rgba(8, 11, 18, .9); border: 1px solid var(--line); border-radius: var(--r-md); padding: 10px 12px; font-size: var(--fs-xs); color: var(--muted); }
 .legend b { color: var(--text); font-weight: 600; }
 .legend .bar { width: 220px; height: 10px; border-radius: 5px; margin: 6px 0 4px; }
 .legend .ticks { display: flex; justify-content: space-between; font-variant-numeric: tabular-nums; }
-.known-marker { width: 12px; height: 12px; border-radius: 50%; border: 2px solid var(--sand-50); background: rgba(11, 19, 43, .55); cursor: pointer; box-shadow: 0 1px 3px rgba(3, 6, 16, .7); }
+.known-marker { width: 12px; height: 12px; border-radius: 50%; border: 2px solid var(--sand-50); background: rgba(8, 11, 18, .55); cursor: pointer; box-shadow: 0 1px 3px rgba(0, 0, 0, .7); }
 .maplibregl-popup-content { background: var(--navy-700); color: var(--text); border: 1px solid var(--line-strong); border-radius: var(--r-sm); font: 400 var(--fs-xs)/1.45 var(--font-text); box-shadow: var(--shadow); }
 .maplibregl-popup-content .approx { color: var(--muted); }
 .maplibregl-popup-tip { display: none; }
@@ -305,7 +316,7 @@ section:has(> #specs) { margin-top: 22px; }
 
 /* ---------------------------------------------------------------- modal de método */
 .method { max-width: 760px; width: calc(100vw - 32px); max-height: calc(100dvh - 48px); background: var(--navy-900); color: var(--text); border: 1px solid var(--line-strong); border-radius: var(--r-lg); padding: 0; box-shadow: var(--shadow); }
-.method::backdrop, .onb::backdrop { background: rgba(7, 12, 29, .78); }
+.method::backdrop, .onb::backdrop { background: rgba(0, 0, 0, .78); }
 .method-in { padding: 24px 28px; }
 .method h3 { margin: 0 44px 12px 0; font: 700 var(--fs-2xl)/1.2 var(--font-display); letter-spacing: -.02em; color: var(--display); }
 .method h4 { margin: 24px 0 8px; font: 600 var(--fs-lg)/1.3 var(--font-text); color: var(--text); scroll-margin-top: 12px; }
@@ -348,7 +359,7 @@ section:has(> #specs) { margin-top: 22px; }
 .loading { position: fixed; inset: 0; display: grid; place-items: center; background: var(--bg); color: var(--muted); font-size: var(--fs-lg); z-index: 10; }
 .loading[hidden] { display: none; }
 body:has(dialog.onb[open]) .loading:not(.mini) { color: transparent; }
-#app > .loading.mini { position: absolute; inset: auto 16px 44px auto; display: block; padding: 6px 14px; border: 1px solid var(--line); border-radius: var(--r-pill); background: rgba(11, 19, 43, .9); font-size: var(--fs-xs); z-index: 4; }
+#app > .loading.mini { position: absolute; inset: auto 16px 44px auto; display: block; padding: 6px 14px; border: 1px solid var(--line); border-radius: var(--r-pill); background: rgba(8, 11, 18, .9); font-size: var(--fs-xs); z-index: 4; }
 #app > .loading.mini[hidden] { display: none; }
 
 /* ---------------------------------------------------------------- móvil */
@@ -412,10 +423,10 @@ body:has(dialog.onb[open]) .loading:not(.mini) { color: transparent; }
 
 /* ---------------------------------------------------------------- Sprint 6: visor de fotos */
 .photo { width: min(1000px, calc(100vw - 24px)); max-height: calc(100dvh - 24px); padding: 0; background: var(--navy-900); color: var(--text); border: 1px solid var(--line-strong); border-radius: var(--r-lg); box-shadow: var(--shadow); overflow: auto; }
-.photo::backdrop { background: rgba(7, 12, 29, .85); }
+.photo::backdrop { background: rgba(0, 0, 0, .85); }
 .photo-in { position: relative; margin: 0; }
 .photo img { display: block; width: 100%; height: auto; aspect-ratio: 3 / 2; object-fit: cover; background: var(--navy-800); }
-.photo .close { position: absolute; top: 8px; right: 8px; width: 44px; height: 44px; display: grid; place-items: center; background: rgba(11, 19, 43, .85); border: 1px solid var(--line-strong); border-radius: 50%; color: var(--text); }
+.photo .close { position: absolute; top: 8px; right: 8px; width: 44px; height: 44px; display: grid; place-items: center; background: rgba(8, 11, 18, .85); border: 1px solid var(--line-strong); border-radius: 50%; color: var(--text); }
 .photo .close svg { width: 18px; height: 18px; }
 .photo figcaption { display: grid; gap: 4px; padding: 14px 20px 16px; font-size: var(--fs-xs); color: var(--muted); }
 .photo figcaption b { font: 600 var(--fs-xl)/1.25 var(--font-display); letter-spacing: -.01em; color: var(--display); }
@@ -457,3 +468,73 @@ body:has(dialog.onb[open]) .loading:not(.mini) { color: transparent; }
   .formulas li { grid-template-columns: minmax(0, 1fr); }
 }
 @media (max-width: 860px) { .legend > div:not(.bar):not(.ticks):not(.keys) { display: none; } }
+
+/* ---------------------------------------------------------------- Realismo y profundidad
+   Superficies con luz superior y sombra en dos capas; botones rectos en vez de píldoras; paneles sobre
+   el mapa como vidrio esmerilado. Nada de esto cambia el contenido ni el contraste del texto. */
+.btn, .when-best, .when-pick, .copy, .method-nav a, .lang { border-radius: var(--r-btn); }
+.lang button { border-radius: 6px; }
+.onb { border-radius: var(--r-lg); }
+.picker, .pick-opt, .when-best, .when-pick, .btn, .copy, .lang, .mgrid button, .cands li button, .about, .wgroup, .onb-opt {
+  background-image: var(--sheen); box-shadow: var(--lift-1); }
+.picker:active, .pick-opt:active, .when-pick:active, .btn:active, .mgrid button:active, .cands li button:active, .when-best:active {
+  transform: translateY(1px); box-shadow: inset 0 2px 4px rgba(0, 0, 0, .6); }
+.when-best[aria-pressed="true"], .lang button[aria-pressed="true"], .method-nav a[aria-current="true"], .pp-details {
+  background-image: linear-gradient(180deg, var(--amber-400), var(--amber-600)); border-color: transparent;
+  box-shadow: inset 0 1px 0 rgba(255, 255, 255, .4), 0 1px 2px rgba(0, 0, 0, .7), 0 8px 20px rgba(217, 119, 6, .28); }
+.card, .legend, .map-menu, .map-info, #map .maplibregl-ctrl-group, .maplibregl-popup-content, #app > .loading.mini {
+  background: rgba(8, 11, 18, .8); -webkit-backdrop-filter: blur(18px) saturate(1.3); backdrop-filter: blur(18px) saturate(1.3); box-shadow: var(--lift-2); }
+#map .maplibregl-ctrl-group { box-shadow: var(--lift-2); }
+.method, .onb, .photo { box-shadow: 0 0 0 1px rgba(255, 255, 255, .05), 0 40px 110px rgba(0, 0, 0, .85); }
+.meter, .mbar { box-shadow: inset 0 1px 2px rgba(0, 0, 0, .6); }
+.card .big > b, .stat > b { text-shadow: 0 2px 14px rgba(244, 214, 176, .22); }
+
+/* ---------------------------------------------------------------- Menú: jerarquía de "Cuándo" y "Qué estás viendo" */
+.when[hidden] { display: none; }
+#month-note.flat { display: flex; gap: 8px; align-items: flex-start; margin: 0; padding: 10px 12px; border: 1px solid var(--line); border-radius: var(--r-md); background: var(--well); color: var(--text); font-size: var(--fs-sm); }
+#month-note.flat .ui { color: var(--sky-400); margin-top: 2px; }
+.what .lead { margin: 0 0 12px; font-size: var(--fs-md); color: var(--text); }
+.stat { display: flex; align-items: center; gap: 14px; margin: 0 0 14px; padding: 12px 14px; border: 1px solid var(--line); border-radius: var(--r-md); background: var(--sheen), var(--well); box-shadow: var(--lift-1); }
+.stat > b { font: 700 2rem/1 var(--font-display); letter-spacing: -.02em; color: var(--display); font-variant-numeric: tabular-nums; }
+.stat > span { font-size: var(--fs-sm); font-weight: 500; line-height: 1.35; }
+.stat small { display: block; margin-top: 2px; font-size: var(--fs-xs); font-weight: 400; color: var(--muted); }
+.how { list-style: none; display: grid; gap: 9px; margin: 0 0 16px; padding: 0; }
+.how li { display: grid; grid-template-columns: 24px 1fr; gap: 10px; align-items: start; font-size: var(--fs-sm); line-height: 1.4; color: var(--muted); }
+.how b { color: var(--text); font-weight: 600; }
+.sw { display: grid; place-items: center; width: 24px; height: 12px; margin-top: 4px; border-radius: 3px; color: var(--sky-400); }
+.sw.cell { width: 12px; justify-self: center; background: var(--ramp-2); box-shadow: 0 0 0 1px rgba(255, 255, 255, .3); }
+.sw.grad { background: linear-gradient(90deg, rgba(240, 106, 168, .5), var(--ramp-1) 45%, var(--ramp-2) 75%, var(--ramp-3)); }
+.sw.ui { height: 16px; margin-top: 2px; }
+.what .sub { margin: 0 0 6px; font: 600 var(--fs-xs)/1.3 var(--font-text); color: var(--muted); }
+
+/* ---------------------------------------------------------------- Leyenda del mapa de calor */
+.legend .bar { display: flex; overflow: hidden; box-shadow: inset 0 0 0 1px rgba(255, 255, 255, .12); }
+.legend .bar i { display: block; height: 100%; }
+.legend .zones, .legend .ticks { display: flex; justify-content: flex-start; }
+.legend .zones span { color: var(--text); font-weight: 600; }
+.legend .ticks span:last-child { margin-left: auto; }
+.dot.usgs { background: var(--sky-400); border: 2px solid var(--navy-900); box-shadow: 0 0 0 1px var(--line-strong); }
+.dot.site.usgs { background: var(--sand-200); border: 2px solid var(--sky-400); box-shadow: none; }
+.dot.cand { border-color: var(--amber-400); }
+
+/* ---------------------------------------------------------------- Ventana única de punto (sigue al cursor) */
+.point-pop { z-index: 5; }
+.point-pop .maplibregl-popup-content { width: 304px; padding: 0; overflow: hidden; border-radius: var(--r-md); }
+.pp-photo { position: relative; display: block; width: 100%; padding: 0; border: 0; background: var(--navy-800); }
+.pp-photo img { display: block; width: 100%; height: auto; aspect-ratio: 3 / 2; object-fit: cover; }
+.pp-photo .zoom { position: absolute; right: 8px; bottom: 8px; display: inline-flex; align-items: center; gap: 6px; min-height: 28px; padding: 3px 10px; border-radius: var(--r-btn); background: rgba(0, 0, 0, .75); color: var(--slate-100); font-size: var(--fs-xs); font-weight: 600; transition: background-color .15s var(--ease), color .15s var(--ease); }
+.pp-photo .zoom svg { width: 14px; height: 14px; }
+.pp-photo:hover .zoom, .pp-photo:focus-visible .zoom { background: var(--amber-600); color: var(--navy-900); }
+.pp-credit { margin: 0; padding: 5px 14px 0; font-size: .6875rem; color: var(--muted); }
+.pp-body { display: grid; gap: 3px; padding: 10px 14px 14px; }
+.pp-name { font: 600 var(--fs-lg)/1.25 var(--font-display); letter-spacing: -.01em; color: var(--display); }
+.pp-kind { display: flex; align-items: center; gap: 7px; color: var(--muted); }
+.pp-body p { margin: 3px 0 0; }
+.pp-sector { display: flex; align-items: center; gap: 8px; margin-top: 10px; padding-top: 10px; border-top: 1px solid var(--line); }
+.pp-sector > span:first-child { flex: 1; color: var(--muted); }
+.pp-sector > b { font: 700 var(--fs-xl)/1 var(--font-display); color: var(--display); font-variant-numeric: tabular-nums; }
+.pp-details { display: flex; align-items: center; justify-content: center; gap: 6px; margin-top: 10px; font-weight: 600; color: var(--navy-900); }
+.pp-details:hover { border-color: transparent; filter: brightness(1.08); }
+.pp-details .go { display: inline-grid; transform: rotate(-90deg); }
+.pp-details .go svg { width: 16px; height: 16px; }
+@media (max-width: 860px) { .legend .keys { display: none; } }

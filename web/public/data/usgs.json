@@ -1,0 +1,157 @@
+{
+ "generated": "2026-11-15",
+ "source": {
+  "title": "USGS — Known Terrestrial Analog Sites for Planetary Science",
+  "url": "https://doi.org/10.5066/P9J72921",
+  "license": "Public domain (U.S. Geological Survey)"
+ },
+ "rule": {
+  "match_km": 20,
+  "analog_threshold": 0.6
+ },
+ "counts": {
+  "total": 192,
+  "duplicate": 5,
+  "offshore": 5,
+  "matched": 5,
+  "shown": 7,
+  "hidden": 170
+ },
+ "matches": [
+  {
+   "known": "Meteor Crater",
+   "usgs": "Barringer (= Meteor)",
+   "lat": 35.0333,
+   "lon": -111.017,
+   "km": 0
+  },
+  {
+   "known": "Haughton impact structure, Devon Island",
+   "usgs": "Haughton",
+   "lat": 75.3667,
+   "lon": -89.6833,
+   "km": 1
+  },
+  {
+   "known": "Ries crater (ESA PANGAEA)",
+   "usgs": "Ries",
+   "lat": 48.8833,
+   "lon": 10.6167,
+   "km": 4
+  },
+  {
+   "known": "Iceland (Holuhraun)",
+   "usgs": "Ritland",
+   "lat": 64.9321,
+   "lon": -16.5217,
+   "km": 16
+  },
+  {
+   "known": "Sudbury impact structure",
+   "usgs": "Sudbury",
+   "lat": 46.6,
+   "lon": -81.1833,
+   "km": 0
+  }
+ ],
+ "sites": [
+  {
+   "name": "Avak",
+   "type": "Impact Crater",
+   "lat": 71.25,
+   "lon": -156.633,
+   "body": null,
+   "reason": "environment",
+   "scores": {
+    "luna.aterrizaje": 0.34,
+    "luna.base": 0.55,
+    "marte.aterrizaje": 0.64,
+    "marte.base": 0.66
+   }
+  },
+  {
+   "name": "Beyenchime-Salaaty",
+   "type": "Impact Crater",
+   "lat": 71,
+   "lon": 121.667,
+   "body": null,
+   "reason": "environment",
+   "scores": {
+    "luna.aterrizaje": 0.3,
+    "luna.base": 0.52,
+    "marte.aterrizaje": 0.73,
+    "marte.base": 0.76
+   }
+  },
+  {
+   "name": "Chukcha",
+   "type": "Impact Crater",
+   "lat": 75.7,
+   "lon": 97.8,
+   "body": null,
+   "reason": "environment",
+   "scores": {
+    "luna.aterrizaje": 0.24,
+    "luna.base": 0.5,
+    "marte.aterrizaje": 0.7,
+    "marte.base": 0.74
+   }
+  },
+  {
+   "name": "El'gygytgyn",
+   "type": "Impact Crater",
+   "lat": 67.5,
+   "lon": 172.083,
+   "body": null,
+   "reason": "environment",
+   "scores": {
+    "luna.aterrizaje": 0.29,
+    "luna.base": 0.46,
+    "marte.aterrizaje": 0.6,
+    "marte.base": 0.64
+   }
+  },
+  {
+   "name": "Grand Falls",
+   "type": "Dunes",
+   "lat": 35.49,
+   "lon": -111.164,
+   "body": "mars",
+   "reason": "tagged",
+   "scores": {
+    "luna.aterrizaje": 0.18,
+    "luna.base": 0.27,
+    "marte.aterrizaje": 0.48,
+    "marte.base": 0.39
+   }
+  },
+  {
+   "name": "Kara-Kul",
+   "type": "Impact Crater",
+   "lat": 39.0167,
+   "lon": 73.45,
+   "body": null,
+   "reason": "environment",
+   "scores": {
+    "luna.aterrizaje": 0.43,
+    "luna.base": 0.66,
+    "marte.aterrizaje": 0.72,
+    "marte.base": 0.7
+   }
+  },
+  {
+   "name": "Popigai",
+   "type": "Impact Crater",
+   "lat": 71.65,
+   "lon": 111.183,
+   "body": null,
+   "reason": "environment",
+   "scores": {
+    "luna.aterrizaje": 0.31,
+    "luna.base": 0.5,
+    "marte.aterrizaje": 0.69,
+    "marte.base": 0.72
+   }
+  }
+ ]
+}

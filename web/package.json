@@ -8,7 +8,8 @@
     "build": "tsc --noEmit && vite build",
     "preview": "vite preview",
     "test": "node --test \"src/**/*.test.ts\"",
-    "photos": "node scripts/fetch-site-photos.mjs"
+    "photos": "node scripts/fetch-site-photos.mjs",
+    "usgs": "node scripts/build-usgs.mjs"
   },
   "dependencies": {
     "maplibre-gl": "5.24.1"

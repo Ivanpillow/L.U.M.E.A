@@ -18,16 +18,18 @@ import type { Fact, Param } from "./types.ts";
 import type { Feature, FeatureCollection } from "geojson";
 
 const GIBS = "https://gibs.earthdata.nasa.gov/wmts/epsg3857/best/BlueMarble_ShadedRelief_Bathymetry/default/GoogleMapsCompatible_Level8/{z}/{y}/{x}.jpeg";
-const MIN_SHOW = 0.25;
+const MIN_SHOW = PARTIAL_MIN;   // por debajo, la celda no se pinta (analogía rota)
 const NEW_KM = 500;
 const SITE_KM = 60;            // una celda: a esta distancia la ficha ofrece la foto del análogo documentado
 const GIBS_NATIVE_ZOOM = 8;    // resolución nativa de Blue Marble en GIBS (GoogleMapsCompatible_Level8)
-// La rampa del mapa sale de los tokens CSS (--ramp-0..3): una sola fuente para mapa, leyenda y calendario.
-const RAMP_STOPS = [0.25, 0.55, 0.8, 1];
+// Mapa de calor (rosado → rojo → naranja). Sale de los tokens CSS (--ramp-0..3): una sola fuente para
+// mapa, leyenda y calendario. De 0,30 a 0,60 (parcial) se pinta tenue; desde 0,60 (análogo), con fuerza.
+const RAMP_STOPS = [0.3, 0.6, 0.8, 1];
+const OP_PARTIAL = 0.36, OP_ANALOG = 0.88;
 // Copia de seguridad por si la hoja de estilos aún no está aplicada al leer el token.
 const TOKEN_FALLBACK: Record<string, string> = {
-  "--ramp-0": "#3A506B", "--ramp-1": "#D97706", "--ramp-2": "#F4D6B0", "--ramp-3": "#FFF6E5",
-  "--navy-950": "#070C1D", "--navy-900": "#0B132B", "--sky-400": "#5BC0DE", "--sand-50": "#FFF6E5",
+  "--ramp-0": "#F06AA8", "--ramp-1": "#E11D48", "--ramp-2": "#F97316", "--ramp-3": "#FFC56B",
+  "--navy-950": "#000000", "--navy-900": "#06080E", "--amber-400": "#F0A23B", "--sky-400": "#5BC0DE", "--sand-50": "#FFF6E5",
   "--sand-200": "#F4D6B0", "--amber-600": "#D97706",
 };
 const token = (name: string) =>
@@ -49,7 +51,23 @@ let year: ModeYear | null = null;      // los 12 meses ya calculados
 let scores: ModeGridScores | null = null; // vista del mes elegido (o mejor mes)
 let mapReady = false;
 let newCands: number[] = [];                 // candidatos del ranking marcados NUEVO
-let sitePopup: maplibregl.Popup | null = null;
+// ventana única de punto (sitio documentado, punto USGS o candidato nuevo): sigue al cursor
+type PointRef = { kind: "site" | "usgs" | "cand"; id: number };
+let pointPop: maplibregl.Popup | null = null;
+let pointRef: PointRef | null = null;
+let pointTimer: number | undefined;
+let pointPinned = false;                     // abierta con clic/toque: no se cierra al salir del punto
+// capa USGS ya filtrada por scripts/build-usgs.mjs (data/usgs.json)
+interface UsgsSite { name: string; type: string; lat: number; lon: number; body: string | null; reason: "tagged" | "environment" }
+interface UsgsMatch { known: string; usgs: string; lat: number; lon: number; km: number }
+interface UsgsLayer {
+  source: { title: string; url: string };
+  counts: { total: number; duplicate: number; offshore: number; matched: number; shown: number; hidden: number };
+  matches: UsgsMatch[]; sites: UsgsSite[];
+}
+let usgs: UsgsLayer | null = null;
+const usgsMatch = new Map<string, UsgsMatch>();  // nombre del sitio documentado -> su registro en USGS
+const cellIndex = new Map<number, number>();     // (fila, columna) de la rejilla -> celda
 let photos: Record<string, PhotoCredit> = {};  // créditos de las fotos (img/sites/credits.json)
 
 const target = () => ds.m.targets[parts[0].profile.target];
@@ -158,7 +176,7 @@ function changeLang(l: Lang) {
   applyStatic();
   if (!ds || !state.d) return;
   renderAll();
-  sitePopup?.remove();
+  closePoint();
   if (state.selected >= 0) renderCard(state.selected);
 }
 
@@ -205,6 +223,15 @@ function togglePicker(kind: "dest" | "mission") {
 // ------------------------------------------------------------------ 4. meses
 function renderMonths() {
   const MN = monthNames("long"), SH = monthNames();
+  const flat = isFlat();
+  $("#when").hidden = flat;
+  $("#month-note").classList.toggle("flat", flat);
+  if (flat) {   // nada que elegir: se dice en una línea en vez de mostrar 12 meses iguales
+    $("#month-grid").hidden = true;
+    $("#month-grid").innerHTML = "";
+    $("#month-note").innerHTML = `${ui(UI.info)}<span>${esc(t("month.flat"))}</span>`;
+    return;
+  }
   const best = $<HTMLButtonElement>("#month-best"), pick = $<HTMLButtonElement>("#month-pick");
   best.setAttribute("aria-pressed", String(state.month < 0));
   best.innerHTML = `${ui(UI.star)}${esc(t("month.best.btn"))}`;
@@ -218,9 +245,8 @@ function renderMonths() {
   grid.hidden = !state.monthGrid;
   if (!state.monthGrid || !year) { grid.innerHTML = ""; return; }
   const counts = Array.from(year.analogCellsByMonth), max = Math.max(1, ...counts);
-  const flat = Math.min(...counts) === max;            // modo con criterios anuales: todos los meses iguales
-  const top = flat ? -1 : counts.indexOf(max);
-  grid.innerHTML = `<p class="note">${esc(t("month.grid.hint", { thr: num(thr, 2) }))}${flat ? ` ${esc(t("month.flat"))}` : ""}</p><div class="mgrid" role="group" aria-label="${esc(t("month.pick"))}">` +
+  const top = Math.min(...counts) === max ? -1 : counts.indexOf(max);
+  grid.innerHTML = `<p class="note">${esc(t("month.grid.hint", { thr: num(thr, 2) }))}</p><div class="mgrid" role="group" aria-label="${esc(t("month.pick"))}">` +
     SH.map((m, k) => `<button type="button" data-m="${k}" aria-pressed="${state.month === k}"
         aria-label="${esc(t("month.cell.tip", { month: MN[k], n: num(counts[k]), thr: num(thr, 2) }))}"
         ${tip(t(k === top && counts[k] > 0 ? "month.cell.top" : "month.cell.tip", { month: MN[k], n: num(counts[k]), thr: num(thr, 2) }))}>
@@ -232,6 +258,9 @@ function renderMonths() {
   }));
 }
 
+/** Modo cuyos criterios son todos anuales: el mapa es idéntico los 12 meses. */
+const isFlat = () => parts.every((p) => p.params.every((q) => !ds.m.features[q.feature]?.monthly));
+
 function setMonth(m: number) {
   state.month = m;
   refresh(true);
@@ -239,13 +268,28 @@ function setMonth(m: number) {
 
 // ------------------------------------------------------------------ 5. qué estás viendo
 function renderWhat() {
+  if (!scores) return;
   const f = num(MARS_BASE_SCALE, 1), tg = target(), MN = monthNames("long");
+  // la cifra principal sale del mismo mapa que se está viendo
+  let analog = 0, areaAnalog = 0, areaAll = 0;
+  for (let c = 0; c < ds.n; c++) {
+    const w = Math.cos(ds.lat[c] * Math.PI / 180);
+    areaAll += w;
+    if (scores.score[c] >= thr) { analog++; areaAnalog += w; }
+  }
+  const when = state.month < 0 ? t("what.month.best") : t("what.month.one", { month: MN[state.month].toLowerCase() });
+  const sub = isFlat() ? t("what.stat.flat", { thr: num(thr, 2) }) : `${t("what.stat.thr", { thr: num(thr, 2) })} · ${when}`;
   $("#what").innerHTML = `
-    <p>${esc(t(`mode.${state.d!}.${state.m!}.what`, { f }))} ${esc(t("what.cells", { dest: t(`what.dest.${state.d!}`) }))}
-      ${esc(state.month < 0 ? t("what.month.best") : t("what.month.one", { month: MN[state.month].toLowerCase() }))} ${esc(t("what.click"))}</p>
-    <p class="note">${esc(parts.length > 1 ? t("mode.combines", { n: parts.length }) : t("mode.single"))}</p>
+    <p class="lead">${esc(t(`mode.${state.d!}.${state.m!}.what`, { f }))}</p>
+    <div class="stat" tabindex="0" ${tip(t("what.stat.tip", { thr: num(thr, 2) }))}><b>${num(analog)}</b>
+      <span>${esc(t("what.stat", { pct: num(100 * areaAnalog / areaAll, 1) }))}<small>${esc(sub)}</small></span></div>
+    <ul class="how">
+      <li><i class="sw cell" aria-hidden="true"></i><span>${t("what.how.cell", { dest: t(`what.dest.${state.d!}`) })}</span></li>
+      <li><i class="sw grad" aria-hidden="true"></i><span>${t("what.how.color", { thr: num(thr, 2) })}</span></li>
+      <li>${ui(UI.info, "sw")}<span>${t("what.how.click")}</span></li>
+    </ul>
+    <h3 class="sub">${esc(parts.length > 1 ? t("mode.combines", { n: parts.length }) : t("mode.single"))}</h3>
     <ul class="chips">${parts.map((p) => `<li tabindex="0" ${tip(profileTip(p))}>${esc(pshort(p.profile.id, p.profile.label))}</li>`).join("")}</ul>
-    ${state.d === "marte" && state.m === "base" ? `<p class="note">${esc(t("mode.marsbase.note", { f }))}</p>` : ""}
     <details class="about">
       <summary><span class="ico">${ICON[state.d!]}</span><span class="txt"><b>${esc(td(tg.name))}</b><small>${esc(t("dest.about"))}</small></span></summary>
       <div class="about-body"><p>${esc(td(tg.summary))}</p>
@@ -272,6 +316,7 @@ function renderSpecs() {
     <div class="spec"><h3>${esc(t("specs.validation.h"))}</h3>
       <ul>${perTest((p) => `${esc(t("specs.val.known", { pct: pct(p.profile.validation!.known_median_pct, 0), n: p.profile.validation!.n_known }))}
         ${esc(t("specs.val.tropics", { pct: pct(p.profile.validation!.tropics_pct, 1) }))}`)}</ul>
+      ${state.d === "marte" && state.m === "base" ? `<p class="note">${esc(t("mode.marsbase.note", { f: num(MARS_BASE_SCALE, 1) }))}</p>` : ""}
       <p class="links">${how("m-val")} · <button type="button" class="link" data-method="m-limits">${esc(t("specs.src.list", { n: ds.m.known.length }))}</button></p></div>
     <div class="spec"><h3>${esc(t("specs.stability.h"))}</h3>
       <ul>${perTest((p) => `${esc(t("specs.stab.jaccard", { j: num(p.profile.validation!.jaccard, 2) }))}
@@ -325,10 +370,17 @@ function renderWeights() {
 }
 
 function renderLegend() {
-  $("#legend").innerHTML = `<b>${esc(t("legend.title", { mode: modeLabel() }))}</b><div class="bar" style="background:linear-gradient(90deg, ${RAMP.map(([stop, col]) => `${col} ${Math.round((stop - RAMP[0][0]) / (1 - RAMP[0][0]) * 100)}%`).join(", ")})"></div>
-    <div class="ticks"><span>${num(MIN_SHOW, 2)}</span><span>${num(0.5, 1)}</span><span>${num(0.75, 2)}</span><span>1</span></div>
+  const cut = Math.round((thr - MIN_SHOW) / (1 - MIN_SHOW) * 100);
+  const hasUsgs = !!usgs?.sites.length, hasMatch = usgsMatch.size > 0;
+  $("#legend").innerHTML = `<b>${esc(t("legend.title", { mode: modeLabel() }))}</b>
+    <div class="bar"><i style="flex:0 0 ${cut}%;opacity:.5;background:linear-gradient(90deg, ${RAMP[0][1]}, ${RAMP[1][1]})"></i><i style="flex:1;background:linear-gradient(90deg, ${RAMP[1][1]}, ${RAMP[2][1]} 50%, ${RAMP[3][1]})"></i></div>
+    <div class="zones"><span style="flex:0 0 ${cut}%">${esc(t("legend.partial"))}</span><span>${esc(t("legend.analog"))}</span></div>
+    <div class="ticks"><span style="flex:0 0 ${cut}%">${num(MIN_SHOW, 2)}</span><span>${num(thr, 2)}</span><span>1</span></div>
     <div>${esc(t("legend.note", { min: num(MIN_SHOW, 2) }))}</div>
-    <div class="keys"><span><i class="dot site"></i>${esc(t("legend.site"))}</span><span><i class="dot cand"></i>${esc(t("legend.cand"))}</span></div>`;
+    <div class="keys"><span><i class="dot site"></i>${esc(t("legend.site"))}</span>
+      ${hasMatch ? `<span><i class="dot site usgs"></i>${esc(t("legend.site.usgs"))}</span>` : ""}
+      ${hasUsgs ? `<span><i class="dot usgs"></i>${esc(t("legend.usgs"))}</span>` : ""}
+      <span><i class="dot cand"></i>${esc(t("legend.cand"))}</span></div>`;
 }
 
 function renderAll() {
@@ -426,7 +478,7 @@ function renderCard(c: number) {
 
   const calCell = (s: number, name: string) => {
     const rgb = colorFor(s);
-    return `<div style="background:rgb(${rgb.join(" ")});color:${inkOn(rgb)};opacity:${s < MIN_SHOW ? 0.4 : 1}" ${tip(`${name}: ${fmtScore(s)}`)}>${name[0]}</div>`;
+    return `<div style="background:rgb(${rgb.join(" ")});color:${inkOn(rgb)};opacity:${s < MIN_SHOW ? 0.3 : s < thr ? 0.6 : 1}" ${tip(`${name}: ${fmtScore(s)}`)}>${name[0]}</div>`;
   };
   const analogMonths = monthScores.map((s, m) => (s.score >= thr ? MN[m] : "")).filter(Boolean);
   const novelty = nk.km > NEW_KM
@@ -482,10 +534,111 @@ function renderCard(c: number) {
     }
     b.querySelector("span")!.textContent = b.dataset.tip!;
   });
-  card.querySelector<HTMLButtonElement>("[data-photo]")?.addEventListener("click", () => openPhoto(siteHere));
+  card.querySelector<HTMLButtonElement>("[data-photo]")?.addEventListener("click", () => openPhoto({ kind: "site", id: siteHere }));
 }
 
-// ------------------------------------------------------------------ fotos de los análogos documentados (carga diferida)
+// ------------------------------------------------------------------ puntos del mapa: una sola ventana que sigue al cursor
+interface PointInfo {
+  name: string; lat: number; lon: number; dot: string; kind: string; desc: string; coordsNote: string;
+  photo?: PhotoCredit; cell: number;
+}
+
+/** Celda de la rejilla que contiene (o toca) una coordenada; -1 si cae fuera de tierra firme. */
+function cellAt(lat: number, lon: number): number {
+  const { dlat, dlon } = ds.m.grid, nlon = Math.round(360 / dlon);
+  const i0 = Math.round((lat + 90) / dlat), j0 = Math.round((lon + 180) / dlon);
+  let best = -1, bd = Infinity;
+  for (let di = -1; di <= 1; di++) for (let dj = -1; dj <= 1; dj++) {
+    const c = cellIndex.get((i0 + di) * 4096 + ((j0 + dj + nlon) % nlon));
+    if (c === undefined) continue;
+    const d = haversineKm(lat, lon, ds.lat[c], ds.lon[c]);
+    if (d < bd) { bd = d; best = c; }
+  }
+  return bd <= 45 ? best : -1;
+}
+
+/** Posición con la que se pinta un análogo documentado: la de USGS si la capa lo incluye. */
+function sitePos(i: number) {
+  const k = ds.m.known[i], mt = usgsMatch.get(k.name);
+  return mt ? { lat: mt.lat, lon: mt.lon, usgs: true } : { lat: k.lat, lon: k.lon, usgs: false };
+}
+
+const bodyName = (b: string | null) => t(b === "moon" ? "body.moon" : b === "mars" ? "body.mars" : "body.both");
+const usgsType = (type: string) => tOpt(`usgs.type.${slug(type)}`, type);
+
+function pointInfo(ref: PointRef): PointInfo {
+  if (ref.kind === "site") {
+    const k = ds.m.known[ref.id], pos = sitePos(ref.id);
+    return { name: k.name, lat: pos.lat, lon: pos.lon, dot: pos.usgs ? "site usgs" : "site", kind: t("known.kind"),
+      desc: t("known.popup", { body: bodyName(k.body), use: td(k.use) }),
+      coordsNote: pos.usgs ? t("known.usgs") : t("known.approx"), photo: photos[slug(k.name)], cell: cellAt(pos.lat, pos.lon) };
+  }
+  if (ref.kind === "usgs") {
+    const u = usgs!.sites[ref.id];
+    return { name: u.name, lat: u.lat, lon: u.lon, dot: "usgs", kind: t("usgs.kind"),
+      desc: u.reason === "tagged" ? t("usgs.tagged", { type: usgsType(u.type), body: bodyName(u.body) }) : t("usgs.env", { type: usgsType(u.type) }),
+      coordsNote: t("usgs.coords"), photo: photos[slug(u.name)], cell: cellAt(u.lat, u.lon) };
+  }
+  const c = ref.id, nk = nearestKnown(c);
+  return { name: cellName(c), lat: ds.lat[c], lon: ds.lon[c], dot: "cand", kind: t("cand.kind"),
+    desc: t("card.new", { km: num(Math.round(nk.km)), name: nk.name }), coordsNote: "", cell: c };
+}
+
+function pointHtml(p: PointInfo): string {
+  const s = p.cell >= 0 && scores ? scores.score[p.cell] : NaN;
+  const photo = p.photo ? `<button type="button" class="pp-photo" aria-label="${esc(t("card.photo", { name: p.name }))}">
+      <img src="img/sites/${esc(p.photo.file)}" alt="" width="300" height="200" loading="lazy" decoding="async" />
+      <span class="zoom">${UI.photo}${esc(t("photo.enlarge"))}</span></button>
+    <p class="pp-credit">${esc(t("photo.credit"))} ${esc(p.photo.source)} · ${esc(p.photo.sensor)}</p>` : "";
+  const sector = p.cell < 0 ? `<p class="approx">${esc(t("point.nocell"))}</p>` : `
+    <div class="pp-sector"><span>${esc(t("point.sector", { mode: modeLabel() }))}</span><b ${tip(t("tip.score"))}>${fmtScore(s)}</b>${lightChip(light(s, thr), thr)}</div>
+    <button type="button" class="btn pp-details">${esc(t("point.details"))}${ui(UI.chevron, "go")}</button>`;
+  return `<div class="pp">${photo}<div class="pp-body">
+    <b class="pp-name">${esc(p.name)}</b>
+    <span class="pp-kind"><i class="dot ${p.dot}"></i>${esc(p.kind)}</span>
+    <p>${esc(p.desc)}</p>${p.coordsNote ? `<p class="approx">${esc(p.coordsNote)}</p>` : ""}
+    ${sector}</div></div>`;
+}
+
+/** Abre la ventana de un punto. Al pasar el cursor se cierra sola cuando el cursor sale del punto y de la ventana. */
+function showPoint(ref: PointRef, pinned = false) {
+  window.clearTimeout(pointTimer);
+  if (pinned) pointPinned = true;
+  if (pointRef && pointRef.kind === ref.kind && pointRef.id === ref.id && pointPop?.isOpen()) return;
+  closePoint();
+  pointPinned = pinned;
+  pointRef = ref;
+  const p = pointInfo(ref);
+  pointPop = new maplibregl.Popup({ offset: 14, closeButton: false, closeOnClick: false, maxWidth: "304px", className: "point-pop" })
+    .setLngLat([p.lon, p.lat]).setHTML(pointHtml(p)).addTo(map);
+  const el = pointPop.getElement();
+  el.addEventListener("mouseenter", () => window.clearTimeout(pointTimer));
+  el.addEventListener("mouseleave", () => schedulePointClose(true));
+  el.querySelector(".pp-photo")?.addEventListener("click", () => openPhoto(ref));
+  el.querySelector(".pp-details")?.addEventListener("click", () => {
+    closePoint();
+    map.flyTo({ center: [p.lon, p.lat], zoom: Math.max(map.getZoom(), 3.2) });
+    select(p.cell);
+  });
+}
+
+/** Cierre con un pequeño margen, para poder cruzar del punto a la ventana sin que desaparezca. */
+function schedulePointClose(force = false) {
+  if (pointPinned && !force) return;
+  window.clearTimeout(pointTimer);
+  pointTimer = window.setTimeout(() => {
+    if (document.querySelector("dialog.photo[open]")) return;   // el visor está abierto: la ventana espera
+    closePoint();
+  }, 260);
+}
+
+function closePoint() {
+  window.clearTimeout(pointTimer);
+  pointPop?.remove();
+  pointPop = null; pointRef = null; pointPinned = false;
+}
+
+// ------------------------------------------------------------------ fotos (carga diferida)
 const photoOf = (i: number): PhotoCredit | undefined => photos[slug(ds.m.known[i].name)];
 
 function photoButton(i: number, withName = false): string {
@@ -494,9 +647,9 @@ function photoButton(i: number, withName = false): string {
   return `<button type="button" class="btn small photo-btn" data-photo="${i}">${UI.photo}<span>${esc(label)}</span></button>`;
 }
 
-async function openPhoto(i: number) {
-  const p = photoOf(i);
-  if (p) (await import("./photo.ts")).openPhoto(ds.m.known[i], p);
+async function openPhoto(ref: PointRef) {
+  const p = pointInfo(ref);
+  if (p.photo) (await import("./photo.ts")).openPhoto(p.name, p.photo, p.coordsNote);
 }
 
 // ------------------------------------------------------------------ método (carga diferida)
@@ -516,8 +669,28 @@ function cellsGeoJSON(): FeatureCollection {
 // Puntos como capas del mapa (no elementos HTML): al vivir sobre el globo, solo se pintan en el
 // hemisferio que mira la cámara y nunca se ven "a través" de la Tierra.
 function sitesGeoJSON(): FeatureCollection {
-  return { type: "FeatureCollection", features: ds.m.known.map((k, i) => ({
-    type: "Feature", id: i, properties: {}, geometry: { type: "Point", coordinates: [k.lon, k.lat] } })) };
+  return { type: "FeatureCollection", features: ds.m.known.map((_, i) => {
+    const pos = sitePos(i);
+    return { type: "Feature", id: i, properties: { u: pos.usgs ? 1 : 0 }, geometry: { type: "Point", coordinates: [pos.lon, pos.lat] } };
+  }) };
+}
+
+function usgsGeoJSON(): FeatureCollection {
+  return { type: "FeatureCollection", features: (usgs?.sites ?? []).map((u, i) => ({
+    type: "Feature", id: i, properties: {}, geometry: { type: "Point", coordinates: [u.lon, u.lat] } })) };
+}
+
+/** Capa USGS ya filtrada (scripts/build-usgs.mjs). Archivo pequeño, cargado después del mapa. */
+async function loadUsgs() {
+  try {
+    const j = await fetch("data/usgs.json").then((r) => (r.ok ? r.json() as Promise<UsgsLayer> : null));
+    if (!j) return;
+    usgs = j;
+    for (const mt of j.matches) usgsMatch.set(mt.known, mt);
+    (map.getSource("usgs") as maplibregl.GeoJSONSource | undefined)?.setData(usgsGeoJSON());
+    (map.getSource("sites") as maplibregl.GeoJSONSource | undefined)?.setData(sitesGeoJSON());
+    if (state.d) renderLegend();
+  } catch { /* capa complementaria: sin ella la app sigue igual */ }
 }
 
 function candidatesGeoJSON(): FeatureCollection {
@@ -528,20 +701,6 @@ function candidatesGeoJSON(): FeatureCollection {
 function syncCandidateLayer() {
   if (!mapReady) return;
   (map.getSource("cand-new") as maplibregl.GeoJSONSource | undefined)?.setData(candidatesGeoJSON());
-}
-
-function siteHtml(i: number): string {
-  const k = ds.m.known[i];
-  const body = t(k.body === "moon" ? "body.moon" : k.body === "mars" ? "body.mars" : "body.both");
-  return `<b>${esc(k.name)}</b><br>${esc(t("known.popup", { body, use: td(k.use) }))}<br><span class="approx">${esc(t("known.approx"))}</span>`;
-}
-
-function openSite(i: number) {
-  const k = ds.m.known[i];
-  sitePopup?.remove();
-  sitePopup = new maplibregl.Popup({ offset: 12, closeButton: false, maxWidth: "280px" })
-    .setLngLat([k.lon, k.lat]).setHTML(siteHtml(i) + photoButton(i)).addTo(map);
-  sitePopup.getElement().querySelector<HTMLButtonElement>("[data-photo]")?.addEventListener("click", () => openPhoto(i));
 }
 
 // Vistas de "Ir a continente": centro [lon, lat] y zoom en escritorio.
@@ -585,9 +744,13 @@ function buildMap() {
           attribution: "<a href='https://earthdata.nasa.gov/gibs'>NASA GIBS</a> · Blue Marble · <a href='https://www.naturalearthdata.com/'>Natural Earth</a>" },
       },
       layers: [
-        { id: "bg", type: "background", paint: { "background-color": token("--navy-950") } },
-        { id: "gibs", type: "raster", source: "gibs", paint: { "raster-saturation": -0.5, "raster-brightness-max": 0.72, "raster-contrast": 0.05 } },
+        { id: "bg", type: "background", paint: { "background-color": "#02040A" } },
+        // color natural de Blue Marble (antes se apagaba): la Tierra se ve como una foto, no como un dibujo
+        { id: "gibs", type: "raster", source: "gibs", paint: { "raster-saturation": -0.12, "raster-brightness-max": 0.94, "raster-contrast": 0.12 } },
       ],
+      // halo de atmósfera alrededor del globo; se desvanece al acercarse
+      sky: { "atmosphere-blend": ["interpolate", ["linear"], ["zoom"], 0, 1, 4.5, 1, 7, 0] },
+      light: { anchor: "map", position: [1.5, 90, 80] },
     },
     // en pantallas estrechas el globo entero debe caber para ver resultados sin mover el mapa
     center: [15, 55], zoom: window.innerWidth < 860 ? 0.6 : 1.6,
@@ -600,44 +763,50 @@ function buildMap() {
     const s: maplibregl.ExpressionSpecification = ["coalesce", ["feature-state", "s"], 0];
     map.addLayer({ id: "cells", type: "fill", source: "cells", paint: {
       "fill-color": ["interpolate", ["linear"], s, ...RAMP.flat()] as unknown as maplibregl.ExpressionSpecification,
-      "fill-opacity": ["case", [">=", s, MIN_SHOW], 0.82, 0],
+      "fill-opacity": ["case", [">=", s, thr], OP_ANALOG, [">=", s, MIN_SHOW], OP_PARTIAL, 0],
+      "fill-antialias": false,   // sin bordes de celda: el calor se lee como una mancha continua
     } });
     map.addLayer({ id: "sel", type: "line", source: "cells", filter: ["==", ["id"], -1],
       paint: { "line-color": token("--sky-400"), "line-width": 2.5 } });
 
-    // candidato nuevo = anillo ámbar hueco; análogo documentado = punto arena macizo. Ambos opacos.
+    // Tres tipos de punto, todos opacos y con sombra: candidato nuevo = anillo ámbar hueco;
+    // punto USGS en entorno análogo = cielo macizo; análogo documentado = arena macizo
+    // (con aro cielo si su coordenada viene de la capa USGS).
     map.addSource("cand-new", { type: "geojson", data: candidatesGeoJSON() });
+    map.addSource("usgs", { type: "geojson", data: usgsGeoJSON() });
+    map.addSource("sites", { type: "geojson", data: sitesGeoJSON() });
+    for (const source of ["cand-new", "usgs", "sites"]) map.addLayer({ id: `${source}-shadow`, type: "circle", source, paint: {
+      "circle-radius": 11, "circle-color": "#000000", "circle-blur": 0.7, "circle-opacity": 0.75, "circle-translate": [0, 2] } });
     map.addLayer({ id: "cand-new", type: "circle", source: "cand-new", paint: {
       "circle-radius": 7.5, "circle-color": token("--navy-900"),
-      "circle-stroke-color": token("--amber-600"), "circle-stroke-width": 3 } });
-    map.addSource("sites", { type: "geojson", data: sitesGeoJSON() });
+      "circle-stroke-color": token("--amber-400"), "circle-stroke-width": 3 } });
+    map.addLayer({ id: "usgs", type: "circle", source: "usgs", paint: {
+      "circle-radius": 5.5, "circle-color": token("--sky-400"),
+      "circle-stroke-color": token("--navy-900"), "circle-stroke-width": 2 } });
     map.addLayer({ id: "sites", type: "circle", source: "sites", paint: {
       "circle-radius": 5.5, "circle-color": token("--sand-200"),
-      "circle-stroke-color": token("--navy-900"), "circle-stroke-width": 2 } });
+      "circle-stroke-color": ["case", ["==", ["get", "u"], 1], token("--sky-400"), token("--navy-900")], "circle-stroke-width": 2 } });
 
-    const hover = new maplibregl.Popup({ offset: 12, closeButton: false, closeOnClick: false, className: "hover-pop" });
-    map.on("mousemove", "sites", (e) => {
-      const i = e.features?.[0]?.id;
-      if (typeof i !== "number") return;
-      hover.setLngLat([ds.m.known[i].lon, ds.m.known[i].lat])
-        .setHTML(`<b>${esc(ds.m.known[i].name)}</b><br><span class="approx">${esc(t("known.kind"))}</span>`).addTo(map);
-    });
-    map.on("mousemove", "cand-new", (e) => {
-      const c = e.features?.[0]?.id;
-      if (typeof c !== "number") return;
-      hover.setLngLat([ds.lon[c], ds.lat[c]])
-        .setHTML(`<b>${esc(cellName(c))}</b><br><span class="approx">${esc(t("cand.kind"))}</span>`).addTo(map);
-    });
-    for (const layer of ["sites", "cand-new", "cells"]) {
-      map.on("mouseenter", layer, () => (map.getCanvas().style.cursor = "pointer"));
-      map.on("mouseleave", layer, () => { map.getCanvas().style.cursor = ""; hover.remove(); });
+    // Una sola ventana por punto: aparece al pasar el cursor y se queda mientras el cursor esté
+    // sobre el punto o sobre ella. El clic (o el toque) la fija hasta tocar fuera.
+    const POINT_LAYERS = ["sites", "usgs", "cand-new"];
+    const refOf = (f: maplibregl.MapGeoJSONFeature): PointRef | null => typeof f.id !== "number" ? null
+      : { kind: f.layer.id === "sites" ? "site" : f.layer.id === "usgs" ? "usgs" : "cand", id: f.id };
+    for (const layer of POINT_LAYERS) {
+      map.on("mousemove", layer, (e) => { const r = e.features?.[0] ? refOf(e.features[0]) : null; if (r) showPoint(r); });
+      map.on("mouseleave", layer, () => schedulePointClose());
     }
-    // un solo clic decide: sitio documentado > candidato nuevo > celda
+    for (const layer of [...POINT_LAYERS, "cells"]) {
+      map.on("mouseenter", layer, () => (map.getCanvas().style.cursor = "pointer"));
+      map.on("mouseleave", layer, () => (map.getCanvas().style.cursor = ""));
+    }
     map.on("click", (e) => {
-      const hit = map.queryRenderedFeatures(e.point, { layers: ["sites", "cand-new", "cells"] });
-      const site = hit.find((f) => f.layer.id === "sites");
-      if (site && typeof site.id === "number") { hover.remove(); openSite(site.id); return; }
-      const id = (hit.find((f) => f.layer.id === "cand-new") ?? hit.find((f) => f.layer.id === "cells"))?.id;
+      const hit = map.queryRenderedFeatures(e.point, { layers: [...POINT_LAYERS, "cells"] });
+      const pt = hit.find((f) => f.layer.id !== "cells");
+      const r = pt ? refOf(pt) : null;
+      if (r) { showPoint(r, true); return; }
+      closePoint();
+      const id = hit.find((f) => f.layer.id === "cells")?.id;
       if (typeof id === "number" && scores) select(id);
     });
 
@@ -645,6 +814,7 @@ function buildMap() {
     paint();
     $("#loading").hidden = true;
     loadCoastlines();
+    loadUsgs();
   });
 }
 
@@ -654,7 +824,7 @@ async function loadCoastlines() {
     const coast = await fetch("data/coast50m.json").then((r) => r.json());
     map.addSource("coast", { type: "geojson", data: coast });
     map.addLayer({ id: "coast", type: "line", source: "coast", paint: {
-      "line-color": token("--sand-200"), "line-opacity": 0.4,
+      "line-color": "#FFFFFF", "line-opacity": 0.28,
       "line-width": ["interpolate", ["linear"], ["zoom"], 0, 0.5, 6, 1.2],
     } }, "cells");
   } catch { /* capa decorativa: si falla la descarga, el mapa sigue funcionando */ }
@@ -662,6 +832,9 @@ async function loadCoastlines() {
 
 function paint() {
   if (!mapReady || !scores) return;
+  const s: maplibregl.ExpressionSpecification = ["coalesce", ["feature-state", "s"], 0];
+  // el umbral del modo decide qué se ve tenue (parcial) y qué con fuerza (análogo)
+  map.setPaintProperty("cells", "fill-opacity", ["case", [">=", s, thr], OP_ANALOG, [">=", s, MIN_SHOW], OP_PARTIAL, 0]);
   for (let c = 0; c < ds.n; c++) {
     const v = scores.score[c];
     map.setFeatureState({ source: "cells", id: c }, { s: Number.isNaN(v) ? 0 : v });
@@ -693,6 +866,8 @@ function setMode(d: Destination, m: Mission) {
   thr = modeThreshold(parts);
   history.replaceState(null, "", withModeQuery(location.search, d, m) + location.hash); // compartible
   $("#app").classList.add("has-mode");
+  if (isFlat()) { state.month = -1; state.monthGrid = false; }
+  closePoint();
   renderPickers(); renderWeights();
   recompute();
 }
@@ -711,6 +886,7 @@ function wire() {
   $("#btn-continents").addEventListener("click", () => setContinentMenu($("#continents").hidden));
   // Jakob: Esc y clic fuera cierran el desplegable de destino/misión
   document.addEventListener("keydown", (e) => {
+    if (e.key === "Escape") closePoint();
     if (e.key === "Escape" && state.picker) { const k = state.picker; state.picker = null; renderPickers(); $(`#pick-${k}`).focus(); }
     if (e.key === "Escape" && !$("#continents").hidden) { setContinentMenu(false); $("#btn-continents").focus(); }
   });
@@ -739,6 +915,7 @@ async function init() {
     $("#loading").textContent = t("loading.error");
     throw err;
   }
+  for (let c = 0; c < ds.n; c++) cellIndex.set(ds.ci[c] * 4096 + ds.cj[c], c);
   wire();
   buildMap();
   $("#loading").classList.add("mini"); // datos listos: el panel ya se puede usar mientras termina el mapa
@@ -748,7 +925,7 @@ async function init() {
 
 // Gancho de depuración, solo en desarrollo local: permite comprobar el mapa desde la consola.
 if (["localhost", "127.0.0.1"].includes(location.hostname)) {
-  (globalThis as { __lumea?: unknown }).__lumea = { map: () => map, select, openSite, openPhoto };
+  (globalThis as { __lumea?: unknown }).__lumea = { map: () => map, select, showPoint, closePoint, openPhoto, usgs: () => usgs };
 }
 
 init();

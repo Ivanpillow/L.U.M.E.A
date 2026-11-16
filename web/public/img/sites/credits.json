@@ -553,6 +553,174 @@
       "empty_fraction": 0,
       "license": "Public domain: NASA/USGS imagery is not copyrighted. Credit requested: NASA Worldview.",
       "url": "https://wvs.earthdata.nasa.gov/api/v1/snapshot?REQUEST=GetSnapshot&TIME=2000-12-01&BBOX=37.3203%2C92.6603%2C37.6797%2C93.3397&CRS=EPSG%3A4326&LAYERS=Landsat_WELD_CorrectedReflectance_TrueColor_Global_Annual&WRAP=none&FORMAT=image%2Fjpeg&WIDTH=960&HEIGHT=640"
+    },
+    "avak": {
+      "name": "Avak",
+      "file": "avak.jpg",
+      "source": "NASA Worldview Snapshots (NASA GIBS / EOSDIS)",
+      "layer": "Landsat_WELD_CorrectedReflectance_TrueColor_Global_Annual",
+      "layer_title": "Landsat WELD Corrected Reflectance, True Color (annual composite Dec 1999 – Nov 2000)",
+      "sensor": "Landsat 5 TM / Landsat 7 ETM+",
+      "date": "2000-12-01",
+      "resolution_m": 30,
+      "width_km": 60,
+      "bbox": [
+        71.0703,
+        -157.4714,
+        71.4297,
+        -155.7946
+      ],
+      "center": [
+        71.25,
+        -156.633
+      ],
+      "empty_fraction": 0,
+      "license": "Public domain: NASA/USGS imagery is not copyrighted. Credit requested: NASA Worldview.",
+      "url": "https://wvs.earthdata.nasa.gov/api/v1/snapshot?REQUEST=GetSnapshot&TIME=2000-12-01&BBOX=71.0703%2C-157.4714%2C71.4297%2C-155.7946&CRS=EPSG%3A4326&LAYERS=Landsat_WELD_CorrectedReflectance_TrueColor_Global_Annual&WRAP=none&FORMAT=image%2Fjpeg&WIDTH=960&HEIGHT=640"
+    },
+    "beyenchime-salaaty": {
+      "name": "Beyenchime-Salaaty",
+      "file": "beyenchime-salaaty.jpg",
+      "source": "NASA Worldview Snapshots (NASA GIBS / EOSDIS)",
+      "layer": "Landsat_WELD_CorrectedReflectance_TrueColor_Global_Annual",
+      "layer_title": "Landsat WELD Corrected Reflectance, True Color (annual composite Dec 1999 – Nov 2000)",
+      "sensor": "Landsat 5 TM / Landsat 7 ETM+",
+      "date": "2000-12-01",
+      "resolution_m": 30,
+      "width_km": 60,
+      "bbox": [
+        70.8203,
+        120.8392,
+        71.1797,
+        122.4948
+      ],
+      "center": [
+        71,
+        121.667
+      ],
+      "empty_fraction": 0,
+      "license": "Public domain: NASA/USGS imagery is not copyrighted. Credit requested: NASA Worldview.",
+      "url": "https://wvs.earthdata.nasa.gov/api/v1/snapshot?REQUEST=GetSnapshot&TIME=2000-12-01&BBOX=70.8203%2C120.8392%2C71.1797%2C122.4948&CRS=EPSG%3A4326&LAYERS=Landsat_WELD_CorrectedReflectance_TrueColor_Global_Annual&WRAP=none&FORMAT=image%2Fjpeg&WIDTH=960&HEIGHT=640"
+    },
+    "chukcha": {
+      "name": "Chukcha",
+      "file": "chukcha.jpg",
+      "source": "NASA Worldview Snapshots (NASA GIBS / EOSDIS)",
+      "layer": "Landsat_WELD_CorrectedReflectance_TrueColor_Global_Annual",
+      "layer_title": "Landsat WELD Corrected Reflectance, True Color (annual composite Dec 1999 – Nov 2000)",
+      "sensor": "Landsat 5 TM / Landsat 7 ETM+",
+      "date": "2000-12-01",
+      "resolution_m": 30,
+      "width_km": 60,
+      "bbox": [
+        75.5203,
+        96.7089,
+        75.8797,
+        98.8911
+      ],
+      "center": [
+        75.7,
+        97.8
+      ],
+      "empty_fraction": 0,
+      "license": "Public domain: NASA/USGS imagery is not copyrighted. Credit requested: NASA Worldview.",
+      "url": "https://wvs.earthdata.nasa.gov/api/v1/snapshot?REQUEST=GetSnapshot&TIME=2000-12-01&BBOX=75.5203%2C96.7089%2C75.8797%2C98.8911&CRS=EPSG%3A4326&LAYERS=Landsat_WELD_CorrectedReflectance_TrueColor_Global_Annual&WRAP=none&FORMAT=image%2Fjpeg&WIDTH=960&HEIGHT=640"
+    },
+    "el-gygytgyn": {
+      "name": "El'gygytgyn",
+      "file": "el-gygytgyn.jpg",
+      "source": "NASA Worldview Snapshots (NASA GIBS / EOSDIS)",
+      "layer": "Landsat_WELD_CorrectedReflectance_TrueColor_Global_Annual",
+      "layer_title": "Landsat WELD Corrected Reflectance, True Color (annual composite Dec 1999 – Nov 2000)",
+      "sensor": "Landsat 5 TM / Landsat 7 ETM+",
+      "date": "2000-12-01",
+      "resolution_m": 30,
+      "width_km": 60,
+      "bbox": [
+        67.3203,
+        171.3788,
+        67.6797,
+        172.7872
+      ],
+      "center": [
+        67.5,
+        172.083
+      ],
+      "empty_fraction": 0,
+      "license": "Public domain: NASA/USGS imagery is not copyrighted. Credit requested: NASA Worldview.",
+      "url": "https://wvs.earthdata.nasa.gov/api/v1/snapshot?REQUEST=GetSnapshot&TIME=2000-12-01&BBOX=67.3203%2C171.3788%2C67.6797%2C172.7872&CRS=EPSG%3A4326&LAYERS=Landsat_WELD_CorrectedReflectance_TrueColor_Global_Annual&WRAP=none&FORMAT=image%2Fjpeg&WIDTH=960&HEIGHT=640"
+    },
+    "grand-falls": {
+      "name": "Grand Falls",
+      "file": "grand-falls.jpg",
+      "source": "NASA Worldview Snapshots (NASA GIBS / EOSDIS)",
+      "layer": "Landsat_WELD_CorrectedReflectance_TrueColor_Global_Annual",
+      "layer_title": "Landsat WELD Corrected Reflectance, True Color (annual composite Dec 1999 – Nov 2000)",
+      "sensor": "Landsat 5 TM / Landsat 7 ETM+",
+      "date": "2000-12-01",
+      "resolution_m": 30,
+      "width_km": 60,
+      "bbox": [
+        35.3103,
+        -111.495,
+        35.6697,
+        -110.833
+      ],
+      "center": [
+        35.49,
+        -111.164
+      ],
+      "empty_fraction": 0,
+      "license": "Public domain: NASA/USGS imagery is not copyrighted. Credit requested: NASA Worldview.",
+      "url": "https://wvs.earthdata.nasa.gov/api/v1/snapshot?REQUEST=GetSnapshot&TIME=2000-12-01&BBOX=35.3103%2C-111.495%2C35.6697%2C-110.833&CRS=EPSG%3A4326&LAYERS=Landsat_WELD_CorrectedReflectance_TrueColor_Global_Annual&WRAP=none&FORMAT=image%2Fjpeg&WIDTH=960&HEIGHT=640"
+    },
+    "kara-kul": {
+      "name": "Kara-Kul",
+      "file": "kara-kul.jpg",
+      "source": "NASA Worldview Snapshots (NASA GIBS / EOSDIS)",
+      "layer": "Landsat_WELD_CorrectedReflectance_TrueColor_Global_Annual",
+      "layer_title": "Landsat WELD Corrected Reflectance, True Color (annual composite Dec 1999 – Nov 2000)",
+      "sensor": "Landsat 5 TM / Landsat 7 ETM+",
+      "date": "2000-12-01",
+      "resolution_m": 30,
+      "width_km": 60,
+      "bbox": [
+        38.837,
+        73.1031,
+        39.1964,
+        73.7969
+      ],
+      "center": [
+        39.0167,
+        73.45
+      ],
+      "empty_fraction": 0,
+      "license": "Public domain: NASA/USGS imagery is not copyrighted. Credit requested: NASA Worldview.",
+      "url": "https://wvs.earthdata.nasa.gov/api/v1/snapshot?REQUEST=GetSnapshot&TIME=2000-12-01&BBOX=38.837%2C73.1031%2C39.1964%2C73.7969&CRS=EPSG%3A4326&LAYERS=Landsat_WELD_CorrectedReflectance_TrueColor_Global_Annual&WRAP=none&FORMAT=image%2Fjpeg&WIDTH=960&HEIGHT=640"
+    },
+    "popigai": {
+      "name": "Popigai",
+      "file": "popigai.jpg",
+      "source": "NASA Worldview Snapshots (NASA GIBS / EOSDIS)",
+      "layer": "Landsat_WELD_CorrectedReflectance_TrueColor_Global_Annual",
+      "layer_title": "Landsat WELD Corrected Reflectance, True Color (annual composite Dec 1999 – Nov 2000)",
+      "sensor": "Landsat 5 TM / Landsat 7 ETM+",
+      "date": "2000-12-01",
+      "resolution_m": 30,
+      "width_km": 60,
+      "bbox": [
+        71.4703,
+        110.327,
+        71.8297,
+        112.039
+      ],
+      "center": [
+        71.65,
+        111.183
+      ],
+      "empty_fraction": 0,
+      "license": "Public domain: NASA/USGS imagery is not copyrighted. Credit requested: NASA Worldview.",
+      "url": "https://wvs.earthdata.nasa.gov/api/v1/snapshot?REQUEST=GetSnapshot&TIME=2000-12-01&BBOX=71.4703%2C110.327%2C71.8297%2C112.039&CRS=EPSG%3A4326&LAYERS=Landsat_WELD_CorrectedReflectance_TrueColor_Global_Annual&WRAP=none&FORMAT=image%2Fjpeg&WIDTH=960&HEIGHT=640"
     }
   },
   "missing": []
