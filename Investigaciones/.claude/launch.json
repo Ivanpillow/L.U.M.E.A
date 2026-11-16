@@ -6,6 +6,12 @@
       "runtimeExecutable": "npm",
       "runtimeArgs": ["--prefix", "../web", "run", "dev", "--", "--port", "5173", "--strictPort"],
       "port": 5173
+    },
+    {
+      "name": "lumea",
+      "runtimeExecutable": "npm",
+      "runtimeArgs": ["--prefix", "../.claude/worktrees/lumea-ui-ux-frontend-46a7ae/web", "run", "dev", "--", "--port", "5174", "--strictPort"],
+      "port": 5174
     }
   ]
 }
