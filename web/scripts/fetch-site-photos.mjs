@@ -92,7 +92,11 @@ const manifest = JSON.parse(await readFile(new URL("public/data/manifest.json", 
 await mkdir(OUT, { recursive: true });
 const sites = {}, missing = [];
 
-for (const site of manifest.known) {
+// puntos de la capa USGS que la app muestra (ver scripts/build-usgs.mjs), si ya se generó usgs.json
+let usgs = [];
+try { usgs = JSON.parse(await readFile(new URL("public/data/usgs.json", ROOT), "utf8")).sites; } catch { /* sin capa USGS */ }
+
+for (const site of [...manifest.known, ...usgs]) {
   const id = slug(site.name), file = `${id}.jpg`;
   let done = null;
   for (const layer of LAYERS) {
