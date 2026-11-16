@@ -1,4 +1,4 @@
-// TODOS los textos de la interfaz viven aquí (ES por defecto, EN alternativo).
+// TODOS los textos de la interfaz viven aquí.
 // - `t(key)`: textos de la UI. Algunos incluyen HTML escrito por el equipo (nunca datos de usuario).
 // - `td(texto)`: textos que vienen en inglés dentro de los datos (manifest.json); se traducen por
 //   coincidencia exacta y, si falta la traducción, se muestra el original.
@@ -7,8 +7,10 @@ export const LANGS: Lang[] = ["es", "en"];
 
 const es = {
   "app.title": "Lumea — análogos terrestres de la Luna y Marte",
-  "app.description": "Descubre dónde —y cuándo— la Tierra sirve para ensayar el Polo Sur lunar y Marte, con datos abiertos de NASA.",
-  "brand.tagline": "Dónde —y <em>cuándo</em>— la Tierra sirve para ensayar la Luna y Marte.",
+  "app.description": "Descubre dónde —y cuándo— la Tierra sirve para simular el Polo Sur lunar y Marte, con datos abiertos de NASA.",
+  "brand.tagline": "Dónde —y <em>cuándo</em>— la Tierra sirve para simular la Luna y Marte.",
+  "tips.label": "Descripciones al pasar el cursor",
+  "sheet.grip": "Cambiar la altura del menú",
   "lang.label": "Idioma",
   "loading": "Cargando datos de NASA…",
   "loading.error": "No se pudieron cargar los datos. Ejecuta primero el pipeline (ver README).",
@@ -19,7 +21,7 @@ const es = {
 
   // ---- onboarding
   "onb.step": "Paso {n} de 2",
-  "onb.q1": "¿Qué destino quieres ensayar?",
+  "onb.q1": "¿Qué destino quieres simular?",
   "onb.q1.sub": "Lumea busca en la Tierra los lugares que más se parecen a ese destino, con datos abiertos de NASA.",
   "onb.q2": "¿Qué misión?",
   "onb.q2.sub": "Cada misión combina varias pruebas con el mismo peso. Podrás cambiarla después.",
@@ -38,7 +40,7 @@ const es = {
   "dest.marte.what": "Llanuras del hemisferio norte donde los mapas SWIM sitúan hielo enterrado a poca profundidad: las candidatas para aterrizajes humanos.",
   "mission.aterrizaje.name": "Aterrizaje",
   "mission.base.name": "Base",
-  "mode.luna.aterrizaje.what": "Llegar: aterrizar con el Sol rasante, moverse por pendientes y lidiar con el polvo.",
+  "mode.luna.aterrizaje.what": "Un modo de aterrizaje: aterrizar con el Sol rasante, moverse por pendientes y lidiar con el polvo.",
   "mode.luna.base.what": "Quedarse: sobrevivir a la noche fría, buscar hielo en el suelo, moverse y preparar el terreno.",
   "mode.marte.aterrizaje.what": "Llegar: una llanura fría, seca y lisa con hielo bajo el suelo.",
   "mode.marte.base.what": "Quedarse: el mismo perfil, con ×{f} de peso al hielo del suelo y al frío, porque una base depende del hielo como recurso.",
@@ -82,7 +84,7 @@ const es = {
   "what.stat.flat": "score ≥ {thr} · igual todo el año",
   "what.stat.tip": "Celdas del mapa actual con score ≥ {thr}. El porcentaje pondera cada celda por su área real (las celdas polares son más pequeñas).",
   "what.how.cell": "<b>Cada celda</b> es un trozo de tierra firme de ≈ 55 km, comparado con {dest}.",
-  "what.how.color": "<b>Color:</b> tonos claros = menor analogía; rojo vivo = mayor analogía. Una celda es análoga con score ≥ {thr}.",
+  "what.how.color": "<b>Color:</b> morado tenue = se parece a medias; de magenta a rojo claro = más análogo. Una celda es análoga con score ≥ {thr}.",
   "what.how.click": "<b>Toca una celda o un punto</b> para ver por qué sí y dónde falla.",
   "what.dest.luna": "el Polo Sur lunar",
   "what.dest.marte": "las llanuras con hielo de Marte",
@@ -268,7 +270,7 @@ const es = {
   "method.sources.photos": "Fotos de los sitios: NASA Worldview Snapshots; Landsat WELD (30 m) y Blue Marble Next Generation (MODIS). Dominio público. Créditos por imagen en <code>img/sites/credits.json</code>.",
   "method.sources.fonts": "Tipografías: Sora e IBM Plex Sans (SIL Open Font License), servidas por Google Fonts.",
   "method.team.p": "Lumea es un proyecto para el NASA Space Apps Challenge 2026 (14–15 de noviembre de 2026), reto «Identify Earth Locations that Analog the Permanent Moon Base Locations and Mars».",
-  "method.team.pending": "Nombres y roles del equipo: pendientes de añadir.",
+  "method.team.pending": "Nombres del equipo: Diego Iván Hernández Muñoz, Katia Alejandra Ávalos García y Luis Ángel De la Cruz Ascencio.",
   "method.intro": "<b>Lumea</b> convierte las necesidades de capacidad que NASA publicó para su Moon Base (2026) en <i>pruebas</i> (perfiles), y busca en cada celda de tierra firme del planeta los lugares —y los meses— que reproducen las condiciones físicas que cada prueba necesita.",
   "method.modes.p": "Un modo es la media simple, mes a mes, de los scores de sus pruebas (mismo peso para cada una). Luna · Aterrizaje = Sol bajo + Pendientes + Polvo y regolito. Luna · Base = Frío y noche + Hielo en el suelo + Pendientes + Polvo y regolito. Marte usa una sola prueba; en Marte · Base el hielo del suelo y el frío pesan ×{f}.",
   "method.comp.h": "Comparabilidad",
@@ -295,7 +297,7 @@ const es = {
   "method.limits.7.usgs": ". La capa de USGS (doi:10.5066/P9J72921) trae 192 registros, 190 de ellos estructuras de impacto sin cuerpo análogo asignado: 5 coinciden con sitios de esta lista (se usa su coordenada USGS), 7 se muestran porque USGS les asigna un cuerpo o porque su celda es análoga en algún modo, y el resto no se pinta (entorno no análogo, duplicados o bajo el mar). Regla y recuento en <code>scripts/build-usgs.mjs</code> y <code>data/usgs.json</code>",
   "method.sources.basemap": "Mapa base: NASA GIBS / Worldview — Blue Marble Shaded Relief &amp; Bathymetry.",
   "method.sources.names": "Topónimos: © colaboradores de OpenStreetMap (Nominatim).",
-  "method.ai.p": "Un asistente de programación con IA ayudó a localizar y contrastar fuentes, a escribir código del pipeline y de esta interfaz, y a redactar y traducir sus textos. El equipo revisa las decisiones científicas y las afirmaciones, y cada una se puede rastrear hasta las fuentes de esta página.",
+  "method.ai.p": "Utilizamos asistentes de programación con IA para: investigación profunda, contrastar fuentes y compararlas; escribir la estructura del proyecto y generar el mapa; redactar y traducir textos. Las decisiones científicas y las fórmulas fueron revisadas y verificadas por el equipo, y toda la información es rastreable a su fuente, citada en esta página.",
   "method.close": "Cerrar",
 } as const;
 
@@ -305,6 +307,8 @@ const en: Record<Key, string> = {
   "app.title": "Lumea — Earth analogs of the Moon and Mars",
   "app.description": "Find where — and when — Earth can rehearse the lunar South Pole and Mars, with NASA open data.",
   "brand.tagline": "Where — and <em>when</em> — Earth can rehearse the Moon and Mars.",
+  "tips.label": "Descriptions on hover",
+  "sheet.grip": "Change the menu height",
   "lang.label": "Language",
   "loading": "Loading NASA data…",
   "loading.error": "Could not load data. Run the pipeline first (see README).",
@@ -314,7 +318,7 @@ const en: Record<Key, string> = {
   "aria.map": "Analog score globe",
 
   "onb.step": "Step {n} of 2",
-  "onb.q1": "Which destination do you want to rehearse?",
+  "onb.q1": "Which destination do you want to simulate?",
   "onb.q1.sub": "Lumea searches Earth for the places that most resemble that destination, using NASA open data.",
   "onb.q2": "Which mission?",
   "onb.q2.sub": "Each mission combines several tests with equal weight. You can change it later.",
@@ -375,7 +379,7 @@ const en: Record<Key, string> = {
   "what.stat.flat": "score ≥ {thr} · the same all year",
   "what.stat.tip": "Cells on the current map with score ≥ {thr}. The percentage weights each cell by its real area (polar cells are smaller).",
   "what.how.cell": "<b>Each cell</b> is a ≈ 55 km piece of land, compared with {dest}.",
-  "what.how.color": "<b>Colour:</b> light tones = lower analogy; vivid red = higher analogy. A cell is analogous at score ≥ {thr}.",
+  "what.how.color": "<b>Colour:</b> faint purple = a partial match; magenta to light red = more analogous. A cell is analogous at score ≥ {thr}.",
   "what.how.click": "<b>Tap a cell or a point</b> to see why it fits and where it breaks.",
   "what.dest.luna": "the lunar South Pole",
   "what.dest.marte": "the icy plains of Mars",
@@ -583,7 +587,7 @@ const en: Record<Key, string> = {
   "method.limits.7.usgs": ". The USGS layer (doi:10.5066/P9J72921) has 192 records, 190 of them impact structures with no analog body assigned: 5 match sites on this list (their USGS coordinates are used), 7 are shown because USGS assigns them a body or because their cell is analogous in some mode, and the rest are not drawn (non-analog environment, duplicates or offshore). Rule and counts in <code>scripts/build-usgs.mjs</code> and <code>data/usgs.json</code>",
   "method.sources.basemap": "Basemap: NASA GIBS / Worldview — Blue Marble Shaded Relief &amp; Bathymetry.",
   "method.sources.names": "Place names: © OpenStreetMap contributors (Nominatim).",
-  "method.ai.p": "An AI coding assistant helped find and cross-check sources, write code for the pipeline and for this interface, and draft and translate its text. The team reviews the scientific choices and claims, and each one can be traced to the sources on this page.",
+  "method.ai.p": "We used AI coding assistants for: in-depth research, cross-checking and comparing sources; writing the project structure and generating the map; drafting and translating texts. Scientific decisions and formulas were reviewed and verified by the team, and all information is traceable to its source, cited on this page.",
   "method.close": "Close",
 };
 

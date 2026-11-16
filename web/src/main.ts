@@ -13,7 +13,8 @@ import {
 import { openOnboarding } from "./onboarding.ts";
 import { MIN_COVERAGE, haversineKm, membership, topCandidates } from "./scoring.ts";
 import type { PhotoCredit } from "./photo.ts";
-import { initTips, tip } from "./tip.ts";
+import { initTips, onTipsChange, setTipsEnabled, tip, tipsEnabled } from "./tip.ts";
+import { initSheet, type Sheet } from "./sheet.ts";
 import { SUN_LIGHT_POSITION, sunlightTile } from "./sunlight.ts";
 import type { Fact, Param } from "./types.ts";
 import type { Feature, FeatureCollection } from "geojson";
@@ -23,13 +24,14 @@ const MIN_SHOW = PARTIAL_MIN;   // por debajo, la celda no se pinta (analogía r
 const NEW_KM = 500;
 const SITE_KM = 60;            // una celda: a esta distancia la ficha ofrece la foto del análogo documentado
 const GIBS_NATIVE_ZOOM = 8;    // resolución nativa de Blue Marble en GIBS (GoogleMapsCompatible_Level8)
-// Mapa de calor (arena clara → coral → rojo vivo). Sale de los tokens CSS (--ramp-0..3): una sola fuente para
+// Mapa de calor (morado → magenta → rosa → rojo claro): colores saturados que no se confunden con la
+// nieve, el desierto ni el océano de la imagen base. Sale de los tokens CSS (--ramp-0..3): una sola fuente para
 // mapa, leyenda y calendario. De 0,30 a 0,60 (parcial) se pinta tenue; desde 0,60 (análogo), con fuerza.
 const RAMP_STOPS = [0.3, 0.6, 0.8, 1];
-const OP_PARTIAL = 0.36, OP_ANALOG = 0.88;
+const OP_PARTIAL = 0.42, OP_ANALOG = 0.92;
 // Copia de seguridad por si la hoja de estilos aún no está aplicada al leer el token.
 const TOKEN_FALLBACK: Record<string, string> = {
-  "--ramp-0": "#FFE1B5", "--ramp-1": "#FFAD78", "--ramp-2": "#FA684B", "--ramp-3": "#F52E3E",
+  "--ramp-0": "#8C2981", "--ramp-1": "#C2338F", "--ramp-2": "#E8457A", "--ramp-3": "#FF7F8A",
   "--navy-950": "#000000", "--navy-900": "#06080E", "--amber-400": "#F0A23B", "--sky-400": "#5BC0DE", "--sand-50": "#FFF6E5",
   "--sand-200": "#F4D6B0", "--amber-600": "#D97706",
 };
@@ -60,59 +62,6 @@ let pointTimer: number | undefined;
 let pointPinned = false;                     // abierta con clic/toque: no se cierra al salir del punto
 const mobilePanel = window.matchMedia("(max-width: 860px)");
 
-function setPanelOpen(open: boolean) {
-  const panel = $("#panel");
-  const handle = $<HTMLButtonElement>("#panel-toggle");
-  const content = $("#panel-scroll");
-  panel.classList.remove("dragging");
-  panel.style.removeProperty("transform");
-  panel.dataset.state = open ? "open" : "closed";
-  handle.setAttribute("aria-expanded", String(open));
-  handle.setAttribute("aria-label", t(open ? "aria.panel.close" : "aria.panel.open"));
-  content.inert = mobilePanel.matches && !open;
-}
-
-function wireMobilePanel() {
-  const panel = $("#panel");
-  const handle = $<HTMLButtonElement>("#panel-toggle");
-  let startY = 0, startOffset = 0, lastY = 0, lastTime = 0, velocity = 0, moved = false, suppressClick = false;
-  const maxOffset = () => Math.max(0, panel.getBoundingClientRect().height - handle.getBoundingClientRect().height);
-
-  handle.addEventListener("pointerdown", (e) => {
-    if (!mobilePanel.matches || !e.isPrimary) return;
-    startY = lastY = e.clientY;
-    lastTime = e.timeStamp;
-    velocity = 0; moved = false;
-    startOffset = panel.dataset.state === "closed" ? maxOffset() : 0;
-    handle.setPointerCapture(e.pointerId);
-  });
-  handle.addEventListener("pointermove", (e) => {
-    if (!mobilePanel.matches || !handle.hasPointerCapture(e.pointerId)) return;
-    const delta = e.clientY - startY;
-    if (Math.abs(delta) > 5) moved = true;
-    if (!moved) return;
-    panel.classList.add("dragging");
-    panel.style.transform = `translateY(${Math.max(0, Math.min(maxOffset(), startOffset + delta))}px)`;
-    velocity = (e.clientY - lastY) / Math.max(1, e.timeStamp - lastTime);
-    lastY = e.clientY; lastTime = e.timeStamp;
-  });
-  const settle = (e: PointerEvent) => {
-    if (!handle.hasPointerCapture(e.pointerId)) return;
-    handle.releasePointerCapture(e.pointerId);
-    if (!moved) return;
-    suppressClick = true;
-    const offset = Math.max(0, Math.min(maxOffset(), startOffset + e.clientY - startY));
-    setPanelOpen(Math.abs(velocity) > .35 ? velocity < 0 : offset < maxOffset() / 2);
-  };
-  handle.addEventListener("pointerup", settle);
-  handle.addEventListener("pointercancel", settle);
-  handle.addEventListener("click", () => {
-    if (suppressClick) { suppressClick = false; return; }
-    if (mobilePanel.matches) setPanelOpen(panel.dataset.state === "closed");
-  });
-  mobilePanel.addEventListener("change", () => setPanelOpen(true));
-  setPanelOpen(true);
-}
 // capa USGS ya filtrada por scripts/build-usgs.mjs (data/usgs.json)
 interface UsgsSite { name: string; type: string; lat: number; lon: number; body: string | null; reason: "tagged" | "environment" }
 interface UsgsMatch { known: string; usgs: string; lat: number; lon: number; km: number }
@@ -122,6 +71,7 @@ interface UsgsLayer {
   matches: UsgsMatch[]; sites: UsgsSite[];
 }
 let usgs: UsgsLayer | null = null;
+let sheet: Sheet | null = null;                  // hoja inferior del menú (solo teléfono)
 const usgsMatch = new Map<string, UsgsMatch>();  // nombre del sitio documentado -> su registro en USGS
 const cellIndex = new Map<number, number>();     // (fila, columna) de la rejilla -> celda
 let photos: Record<string, PhotoCredit> = {};  // créditos de las fotos (img/sites/credits.json)
@@ -230,7 +180,6 @@ function changeLang(l: Lang) {
   q.set("lang", l);
   history.replaceState(null, "", `?${q.toString()}${location.hash}`);
   applyStatic();
-  setPanelOpen($("#panel").dataset.state !== "closed");
   if (!ds || !state.d) return;
   renderAll();
   closePoint();
@@ -447,6 +396,7 @@ function renderAll() {
 // ------------------------------------------------------------------ ficha de celda
 function select(c: number) {
   state.selected = c;
+  sheet?.set("min");   // teléfono: la ficha manda; el menú se recoge del todo
   if (mapReady) map.setFilter("sel", ["==", ["id"], c]);
   renderCard(c);
 }
@@ -665,9 +615,9 @@ function pointHtml(p: PointInfo): string {
 /** Abre la ventana de un punto. Al pasar el cursor se cierra sola cuando el cursor sale del punto y de la ventana. */
 function showPoint(ref: PointRef, pinned = false) {
   window.clearTimeout(pointTimer);
+  if (pinned) sheet?.set("min");
   if (pinned) pointPinned = true;
   const p = pointInfo(ref);
-  if (pinned && p.photo && mobilePanel.matches) setPanelOpen(false);
   if (pointRef && pointRef.kind === ref.kind && pointRef.id === ref.id && pointPop?.isOpen()) return;
   closePoint();
   pointPinned = pinned;
@@ -871,7 +821,8 @@ function buildMap() {
     const refOf = (f: maplibregl.MapGeoJSONFeature): PointRef | null => typeof f.id !== "number" ? null
       : { kind: f.layer.id === "sites" ? "site" : f.layer.id === "usgs" ? "usgs" : "cand", id: f.id };
     for (const layer of POINT_LAYERS) {
-      map.on("mousemove", layer, (e) => { const r = e.features?.[0] ? refOf(e.features[0]) : null; if (r && !mobilePanel.matches) showPoint(r); });
+      // con las descripciones apagadas (o en el teléfono), la ventana del punto solo se abre con clic/toque
+      map.on("mousemove", layer, (e) => { if (!tipsEnabled() || mobilePanel.matches) return; const r = e.features?.[0] ? refOf(e.features[0]) : null; if (r) showPoint(r); });
       map.on("mouseleave", layer, () => schedulePointClose());
     }
     for (const layer of [...POINT_LAYERS, "cells"]) {
@@ -886,6 +837,7 @@ function buildMap() {
       closePoint();
       const id = hit.find((f) => f.layer.id === "cells")?.id;
       if (typeof id === "number" && scores) select(id);
+      else if (sheet?.snap() === "max") sheet.set("mid");   // toque en el mar o en el espacio: el menú baja a la mitad
     });
 
     mapReady = true;
@@ -952,7 +904,6 @@ function setMode(d: Destination, m: Mission) {
 
 // ------------------------------------------------------------------ init
 function wire() {
-  wireMobilePanel();
   $("#pick-dest").addEventListener("click", () => togglePicker("dest"));
   $("#pick-mission").addEventListener("click", () => togglePicker("mission"));
   $("#month-best").addEventListener("click", () => setMonth(-1));
@@ -962,6 +913,11 @@ function wire() {
     renderWeights(); recompute();
   });
   $("#btn-method").addEventListener("click", () => openMethod());
+  const tipsBtn = $<HTMLButtonElement>("#tips-toggle");
+  const syncTips = (on: boolean) => tipsBtn.setAttribute("aria-checked", String(on));
+  syncTips(tipsEnabled());
+  tipsBtn.addEventListener("click", () => setTipsEnabled(!tipsEnabled()));
+  onTipsChange((on) => { syncTips(on); if (!on) schedulePointClose(true); });
   $("#btn-continents").addEventListener("click", () => setContinentMenu($("#continents").hidden));
   // Jakob: Esc y clic fuera cierran el desplegable de destino/misión
   document.addEventListener("keydown", (e) => {
@@ -997,6 +953,12 @@ async function init() {
   for (let c = 0; c < ds.n; c++) cellIndex.set(ds.ci[c] * 4096 + ds.cj[c], c);
   wire();
   buildMap();
+  sheet = initSheet($("#panel"), $("#panel-scroll"), {
+    limit: () => $("#when-sec"),
+    minVisible: () => $("#panel-toggle").offsetHeight,
+    // el globo se centra en la parte del mapa que deja libre la hoja
+    onChange: (_s, visible) => { map.easeTo({ padding: { top: 0, bottom: Math.round(visible * 0.85), left: 0, right: 0 }, duration: 500 }); },
+  });
   $("#loading").classList.add("mini"); // datos listos: el panel ya se puede usar mientras termina el mapa
   const c = await choice;
   setMode(c.d, c.m);

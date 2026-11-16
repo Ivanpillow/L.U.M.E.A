@@ -38,13 +38,16 @@
   --ok: #5FD6A2;
   --partial: #F7C948;
   --broken: #FF8E85;
-  /* mapa de calor (score 0,30 → 1): claro = menor analogía; rojo vivo = mayor analogía */
-  --ramp-0: #FFE1B5;
-  --ramp-1: #FFAD78;
-  --ramp-2: #FA684B;
-  --ramp-3: #F52E3E;
+  /* mapa de calor (score 0,30 → 1): morado tenue = parcial; magenta → rosa → rojo claro = análogo.
+     Todos saturados: ninguno se confunde con la nieve, el desierto o el mar de la imagen base. */
+  --ramp-0: #8C2981;
+  --ramp-1: #C2338F;
+  --ramp-2: #E8457A;
+  --ramp-3: #FF7F8A;
   /* tipografía */
-  --font-display: "Sora", "Segoe UI", system-ui, sans-serif;
+  --font-brand: "Sora", "Segoe UI", system-ui, sans-serif;
+  --font-display: "IBM Plex Sans", "Segoe UI", system-ui, sans-serif;
+  --font-mono: "IBM Plex Mono", ui-monospace, "Cascadia Mono", Consolas, monospace;
   --font-text: "IBM Plex Sans", "Segoe UI", system-ui, sans-serif;
   --fs-xs: .75rem;
   --fs-sm: .8125rem;
@@ -54,14 +57,15 @@
   --fs-2xl: 1.4375rem;
   --fs-3xl: 1.75rem;
   /* forma y movimiento */
-  --r-sm: 6px;
-  --r-md: 9px;
-  --r-lg: 14px;
-  --r-btn: 9px;
-  --r-pill: 999px;
+  /* forma sobria de herramienta de consulta: esquinas casi rectas, sin píldoras */
+  --r-sm: 3px;
+  --r-md: 4px;
+  --r-lg: 6px;
+  --r-btn: 4px;
+  --r-pill: 4px;
   /* profundidad: luz desde arriba (brillo en el borde superior) y sombra en dos capas */
-  --sheen: linear-gradient(180deg, rgba(255, 255, 255, .06), rgba(255, 255, 255, 0) 60%);
-  --lift-1: inset 0 1px 0 rgba(255, 255, 255, .07), 0 1px 2px rgba(0, 0, 0, .7), 0 6px 14px rgba(0, 0, 0, .4);
+  --sheen: linear-gradient(180deg, rgba(255, 255, 255, .03), rgba(255, 255, 255, 0) 60%);
+  --lift-1: inset 0 1px 0 rgba(255, 255, 255, .05), 0 1px 2px rgba(0, 0, 0, .7), 0 4px 10px rgba(0, 0, 0, .35);
   --lift-2: inset 0 1px 0 rgba(255, 255, 255, .08), 0 2px 6px rgba(0, 0, 0, .7), 0 22px 54px rgba(0, 0, 0, .7);
   --shadow: var(--lift-2);
   --ease: cubic-bezier(.16, 1, .3, 1);
@@ -519,7 +523,7 @@ body:has(dialog.onb[open]) .loading:not(.mini) { color: transparent; }
 .how b { color: var(--text); font-weight: 600; }
 .sw { display: grid; place-items: center; width: 24px; height: 12px; margin-top: 4px; border-radius: 3px; color: var(--sky-400); }
 .sw.cell { width: 12px; justify-self: center; background: var(--ramp-2); box-shadow: 0 0 0 1px rgba(255, 255, 255, .3); }
-.sw.grad { background: linear-gradient(90deg, var(--ramp-0), var(--ramp-1) 42.86%, var(--ramp-2) 71.43%, var(--ramp-3)); }
+.sw.grad { background: linear-gradient(90deg, rgba(140, 41, 129, .6), var(--ramp-1) 42.86%, var(--ramp-2) 71.43%, var(--ramp-3)); }
 .sw.ui { height: 16px; margin-top: 2px; }
 .what .sub { margin: 0 0 6px; font: 600 var(--fs-xs)/1.3 var(--font-text); color: var(--muted); }
 
@@ -554,3 +558,89 @@ body:has(dialog.onb[open]) .loading:not(.mini) { color: transparent; }
 .pp-details .go { display: inline-grid; transform: rotate(-90deg); }
 .pp-details .go svg { width: 16px; height: 16px; }
 @media (max-width: 860px) { .legend .keys { display: none; } }
+
+/* ================================================================ Versión sobria (consulta)
+   Misma paleta y ADN; menos "amigable": esquinas casi rectas, botones planos, jerarquía tipográfica
+   clara (un título siempre se ve más que el texto que encabeza). */
+.brand h1 { font-family: var(--font-brand); }
+.map-info, #map .maplibregl-ctrl-group, .card .close, .method .close, .photo .close { border-radius: var(--r-md); }
+.when-best[aria-pressed="true"], .lang button[aria-pressed="true"], .method-nav a[aria-current="true"], .pp-details {
+  background-image: none; background-color: var(--active); box-shadow: 0 1px 2px rgba(0, 0, 0, .6); }
+.onb-opt:hover, .onb-opt:focus-visible { transform: none; }
+.card .big > b, .stat > b, .cands .sc, .lights .sc, .w output, .pp-sector > b, .mgrid .cnt { font-family: var(--font-mono); letter-spacing: -.01em; }
+.card .big > b, .stat > b { text-shadow: none; }
+
+/* ---- jerarquía del menú lateral: título de sección 17 px / 600; texto 13–14 px / 400 */
+#panel section { margin-top: 30px; }
+#panel h2, .acc > summary { font: 600 1.0625rem/1.3 var(--font-display); color: var(--text); letter-spacing: -.005em; }
+#panel h2 { margin: 0 0 12px; }
+.acc > summary { min-height: 56px; }
+#month-note, .what .lead, .how li, .stat > span { font-weight: 400; }
+.what .lead { font-size: var(--fs-sm); color: var(--muted); line-height: 1.55; }
+.how b { font-weight: 500; }
+.what .sub { font-size: var(--fs-xs); font-weight: 500; color: var(--muted); }
+.picker b { font-size: var(--fs-md); }
+.when-best { font-size: var(--fs-md); }
+.spec h3 { font-size: var(--fs-md); color: var(--text); }
+.panel-foot .note { line-height: 1.55; }
+
+/* ---- interruptor de descripciones (arriba del todo del menú) */
+.tips-row { display: flex; align-items: center; justify-content: space-between; gap: 12px; margin: -6px 0 16px; padding: 0 0 12px; border-bottom: 1px solid var(--line); font-size: var(--fs-xs); color: var(--muted); }
+.switch { position: relative; flex: none; width: 44px; height: 26px; padding: 0; border: 1px solid var(--line-strong); border-radius: 13px; background: var(--well); transition: background-color .2s var(--ease), border-color .2s var(--ease); }
+.switch i { position: absolute; top: 3px; left: 3px; width: 18px; height: 18px; border-radius: 50%; background: var(--slate-300); transition: transform .2s var(--ease), background-color .2s var(--ease); }
+.switch[aria-checked="true"] { background: var(--active); border-color: var(--active); }
+.switch[aria-checked="true"] i { transform: translateX(18px); background: var(--navy-900); }
+.switch::before { content: ""; position: absolute; inset: -9px -4px; }  /* área táctil de 44 px */
+.sheet-grip { display: none; }
+
+/* ---- modal de método: lectura cómoda */
+.method-body { padding: 8px 48px 64px; font-size: .9375rem; line-height: 1.7; }
+.method-body section { padding-top: 36px; }
+.method-body section + section { margin-top: 36px; }
+.method h4 { margin: 0 0 16px; font: 600 1.5rem/1.25 var(--font-display); letter-spacing: -.015em; }
+.method h5 { margin: 32px 0 10px; font-size: 1.0625rem; font-weight: 600; color: var(--display); }
+.method p { margin: 0 0 16px; max-width: 68ch; }
+.method-body section > p:first-of-type { font-size: 1.0625rem; color: var(--text); }
+.method-body ul:not(.formulas) { list-style: none; padding: 0; margin: 0 0 18px; display: grid; gap: 10px; max-width: 72ch; }
+.method-body ul:not(.formulas) > li { margin: 0; max-width: none; padding: 12px 16px; background: var(--well); border: 1px solid var(--line); border-radius: var(--r-md); line-height: 1.6; }
+.method-body #m-sources ul > li { padding: 10px 16px; }
+.method .note { font-size: var(--fs-sm); line-height: 1.6; }
+.method table { font-size: var(--fs-sm); }
+.method td, .method th { padding: 10px 12px; }
+.method tr:nth-child(even) td { background: rgba(255, 255, 255, .025); }
+.formulas { gap: 8px; margin-bottom: 18px !important; }
+.formulas li { padding: 12px 16px; border: 1px solid var(--line); }
+.method code { font-family: var(--font-mono); }
+#m-ai p { padding: 16px 20px; background: var(--well); border: 1px solid var(--line); border-radius: var(--r-md); }
+
+/* ================================================================ Teléfono: menú como hoja inferior
+   Mapa a pantalla completa; el menú se arrastra entre tres alturas (mínima, media y completa). */
+@media (max-width: 860px) {
+  #app { display: block; height: 100dvh; overflow: hidden; }
+  #map { position: fixed; inset: 0; height: auto; }
+  #panel.sheet { position: fixed; left: 0; right: 0; bottom: 0; top: 60px; z-index: 6; padding: 0 16px calc(28px + env(safe-area-inset-bottom));
+    border: 1px solid var(--line); border-bottom: 0; border-radius: 12px 12px 0 0; background: var(--bg);
+    box-shadow: 0 -12px 40px rgba(0, 0, 0, .65); overscroll-behavior: contain; touch-action: pan-y;
+    will-change: transform; transition: transform .52s cubic-bezier(.32, .72, 0, 1); }
+  #panel.sheet[data-snap="min"], #panel.sheet[data-snap="mid"] { overflow-y: hidden; }
+  .sheet .sheet-grip { position: sticky; top: 0; z-index: 2; display: grid; place-items: center; width: calc(100% + 32px); height: 26px; margin: 0 -16px 8px; padding: 0; border: 0; background: var(--bg); cursor: grab; touch-action: none; }
+  .sheet .sheet-grip span { width: 40px; height: 5px; border-radius: 3px; background: var(--slate-500); }
+  .tips-row { margin-top: 0; }
+  .legend { z-index: 2; }
+  .card { z-index: 8; }
+  #app > .loading.mini { inset: 12px auto auto 12px; z-index: 7; }
+  .maplibregl-popup.point-pop { z-index: 7; }
+}
+@media (max-width: 860px) and (prefers-reduced-motion: reduce) { #panel.sheet { transition: none; } }
+@media (max-width: 640px) { .method-body { padding: 4px 16px 40px; font-size: .9375rem; } }
+
+/* ---- hoja inferior sobre el panel de main: el panel es la hoja; #panel-scroll, su contenido */
+@media (max-width: 860px) {
+  #panel.sheet { height: auto; padding: 0; overflow: hidden; }
+  #panel.sheet .panel-scroll { touch-action: pan-y; }
+  #panel.sheet[data-snap="min"] .panel-scroll, #panel.sheet[data-snap="mid"] .panel-scroll { overflow-y: hidden; }
+  #panel.sheet .panel-handle { height: 40px; padding: 0 16px; cursor: grab; touch-action: none; }
+  #panel.sheet .panel-handle-label { opacity: 0; }
+  #panel.sheet[data-snap="min"] .panel-handle-label { opacity: 1; }
+  #panel.sheet .panel-scroll { height: calc(100% - 40px); padding-top: 4px; }
+}
