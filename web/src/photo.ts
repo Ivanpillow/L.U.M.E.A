@@ -23,8 +23,8 @@ export function openPhoto(name: string, p: PhotoCredit, coordsNote: string) {
   const dlg = document.createElement("dialog");
   dlg.className = "photo";
   dlg.setAttribute("aria-labelledby", "photo-title");
-  dlg.innerHTML = `<figure class="photo-in">
-    <button type="button" class="close" aria-label="${esc(t("photo.close"))}">${UI.cross}</button>
+  dlg.innerHTML = `<button type="button" class="close" aria-label="${esc(t("photo.close"))}">${UI.cross}</button>
+    <figure class="photo-in">
     <img src="img/sites/${esc(p.file)}" alt="${esc(t("photo.alt", { name }))}" width="960" height="640" decoding="async" />
     <figcaption>
       <b id="photo-title">${esc(name)}</b>

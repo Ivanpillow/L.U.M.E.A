@@ -82,7 +82,9 @@ svg { display: block; }
 
 /* ---------------------------------------------------------------- estructura */
 #app { position: relative; display: grid; grid-template-columns: 380px 1fr; height: 100vh; }
-#panel { position: relative; z-index: 2; background: linear-gradient(180deg, #0B0E16, var(--bg) 260px); border-right: 1px solid var(--line); box-shadow: 16px 0 44px rgba(0, 0, 0, .6); overflow-y: auto; padding: 20px 20px 28px; }
+#panel { position: relative; z-index: 2; background: linear-gradient(180deg, #0B0E16, var(--bg) 260px); border-right: 1px solid var(--line); box-shadow: 16px 0 44px rgba(0, 0, 0, .6); overflow: hidden; }
+.panel-scroll { height: 100%; overflow-y: auto; padding: 20px 20px 28px; }
+.panel-handle { display: none; }
 /* espacio negro con estrellas fijas y tenues (tres mallas de distinto paso para que no se note el patrón) */
 #map { position: relative; min-height: 300px; background:
   radial-gradient(1px 1px at 40px 60px, rgba(255, 255, 255, .7) 50%, transparent 51%) 0 0 / 331px 331px,
@@ -281,9 +283,10 @@ section:has(> #specs) { margin-top: 22px; }
 .maplibregl-popup-tip { display: none; }
 
 /* ---------------------------------------------------------------- ficha de celda */
-.card { position: absolute; top: 12px; right: 64px; width: min(420px, calc(100vw - 88px)); max-height: calc(100vh - 24px); overflow-y: auto; z-index: 3; background: var(--navy-900); border: 1px solid var(--line-strong); border-radius: var(--r-lg); padding: 18px 20px; box-shadow: var(--shadow); }
+.card { position: absolute; top: 12px; right: 64px; width: min(420px, calc(100vw - 88px)); max-height: calc(100dvh - 24px); overflow: hidden; z-index: 3; background: var(--navy-900); border: 1px solid var(--line-strong); border-radius: var(--r-lg); box-shadow: var(--shadow); }
+.card-scroll { max-height: calc(100dvh - 26px); overflow-y: auto; padding: 18px 20px; }
 .card h3 { margin: 0; padding-right: 40px; font: 600 var(--fs-xl)/1.25 var(--font-display); letter-spacing: -.01em; color: var(--display); text-wrap: balance; }
-.card .close, .method .close { position: absolute; top: 6px; right: 6px; width: 44px; height: 44px; display: grid; place-items: center; background: none; border: 0; color: var(--muted); border-radius: 50%; transition: color .15s var(--ease), background-color .15s var(--ease); }
+.card .close, .method .close { position: absolute; top: 6px; right: 6px; z-index: 1; width: 44px; height: 44px; display: grid; place-items: center; background: none; border: 0; color: var(--muted); border-radius: 50%; transition: color .15s var(--ease), background-color .15s var(--ease); }
 .card .close:hover, .method .close:hover { color: var(--text); background: var(--navy-700); }
 .card .close svg, .method .close svg { width: 18px; height: 18px; }
 .card .coords { color: var(--muted); font-size: var(--fs-xs); margin-top: 2px; }
@@ -364,13 +367,21 @@ body:has(dialog.onb[open]) .loading:not(.mini) { color: transparent; }
 
 /* ---------------------------------------------------------------- móvil */
 @media (max-width: 860px) {
-  #app { grid-template-columns: 1fr; grid-template-rows: 55vh auto; height: auto; }
-  #map { grid-row: 1; height: 55vh; }
-  #panel { grid-row: 2; border-right: 0; border-top: 1px solid var(--line); padding: 18px 16px 28px; }
+  #app { display: block; height: 100dvh; overflow: hidden; }
+  #map { height: 100dvh; min-height: 0; }
+  #panel { position: fixed; top: auto; right: 0; bottom: 0; left: 0; width: 100%; height: 45dvh; border-right: 0; border-top: 1px solid var(--line); border-radius: var(--r-lg) var(--r-lg) 0 0; transition: transform .32s var(--ease); }
+  #panel[data-state="closed"] { transform: translateY(calc(100% - 48px - env(safe-area-inset-bottom))); }
+  #panel.dragging { transition: none; }
+  .panel-handle { display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 3px; width: 100%; height: calc(48px + env(safe-area-inset-bottom)); padding: 0 16px env(safe-area-inset-bottom); border: 0; background: transparent; color: var(--muted); touch-action: none; }
+  .panel-grip { width: 36px; height: 4px; border-radius: var(--r-pill); background: var(--slate-500); }
+  .panel-handle-label { font: 600 var(--fs-xs)/1 var(--font-text); opacity: 0; transition: opacity .2s var(--ease); }
+  #panel[data-state="closed"] .panel-handle-label { opacity: 1; }
+  .panel-scroll { height: calc(100% - 48px - env(safe-area-inset-bottom)); padding: 18px 16px 28px; overscroll-behavior: contain; }
   .legend { top: 12px; left: 12px; bottom: auto; max-width: calc(100vw - 76px); }
   .legend .bar { width: 100%; min-width: 180px; }
-  .card { position: fixed; top: auto; bottom: 0; right: 0; left: 0; width: 100%; max-height: 72vh; border-radius: var(--r-lg) var(--r-lg) 0 0; }
-  #app > .loading.mini { inset: calc(55vh - 84px) 12px auto auto; }
+  .card { position: fixed; top: auto; bottom: 0; right: 0; left: 0; width: 100%; max-height: 72dvh; border-radius: var(--r-lg) var(--r-lg) 0 0; }
+  .card-scroll { max-height: calc(72dvh - 2px); }
+  #app > .loading.mini { inset: 12px 12px auto auto; }
 }
 @media (max-width: 640px) {
   .onb-in { padding: 18px 16px 10px; }
@@ -422,11 +433,11 @@ body:has(dialog.onb[open]) .loading:not(.mini) { color: transparent; }
 .more > summary::after { border-color: var(--link); }
 
 /* ---------------------------------------------------------------- Sprint 6: visor de fotos */
-.photo { width: min(1000px, calc(100vw - 24px)); max-height: calc(100dvh - 24px); padding: 0; background: var(--navy-900); color: var(--text); border: 1px solid var(--line-strong); border-radius: var(--r-lg); box-shadow: var(--shadow); overflow: auto; }
+.photo { width: min(1000px, calc(100vw - 24px)); max-height: calc(100dvh - 24px); padding: 0; background: var(--navy-900); color: var(--text); border: 1px solid var(--line-strong); border-radius: var(--r-lg); box-shadow: var(--shadow); overflow: hidden; }
 .photo::backdrop { background: rgba(0, 0, 0, .85); }
-.photo-in { position: relative; margin: 0; }
+.photo-in { margin: 0; max-height: calc(100dvh - 24px); overflow-y: auto; }
 .photo img { display: block; width: 100%; height: auto; aspect-ratio: 3 / 2; object-fit: cover; background: var(--navy-800); }
-.photo .close { position: absolute; top: 8px; right: 8px; width: 44px; height: 44px; display: grid; place-items: center; background: rgba(8, 11, 18, .85); border: 1px solid var(--line-strong); border-radius: 50%; color: var(--text); }
+.photo .close { position: absolute; top: 8px; right: 8px; z-index: 1; width: 44px; height: 44px; display: grid; place-items: center; background: rgba(8, 11, 18, .85); border: 1px solid var(--line-strong); border-radius: 50%; color: var(--text); }
 .photo .close svg { width: 18px; height: 18px; }
 .photo figcaption { display: grid; gap: 4px; padding: 14px 20px 16px; font-size: var(--fs-xs); color: var(--muted); }
 .photo figcaption b { font: 600 var(--fs-xl)/1.25 var(--font-display); letter-spacing: -.01em; color: var(--display); }
@@ -434,6 +445,11 @@ body:has(dialog.onb[open]) .loading:not(.mini) { color: transparent; }
 
 @media (max-width: 860px) {
   .map-menu { grid-template-columns: 1fr 1fr; right: 62px; top: 60px; min-width: 0; width: calc(100vw - 74px); }
+  .point-pop { position: fixed !important; left: 50% !important; top: 50% !important; transform: translate(-50%, -50%) !important; max-width: calc(100vw - 24px) !important; }
+  .point-pop .maplibregl-popup-content { max-height: calc(100dvh - 32px); overflow-y: auto; }
+  .pp-photo img { max-height: min(27dvh, 200px); object-fit: contain; }
+  .pp-details { position: sticky; bottom: 0; z-index: 1; }
+  .photo img { max-height: calc(100dvh - 190px); object-fit: contain; }
 }
 
 /* ---------------------------------------------------------------- Sprint 7: modal de método (≈ 90 % de la pantalla) */

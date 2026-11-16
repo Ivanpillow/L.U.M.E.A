@@ -13,6 +13,8 @@ const es = {
   "loading": "Cargando datos de NASA…",
   "loading.error": "No se pudieron cargar los datos. Ejecuta primero el pipeline (ver README).",
   "aria.panel": "Controles",
+  "aria.panel.open": "Abrir menú de Lumea",
+  "aria.panel.close": "Cerrar menú de Lumea",
   "aria.map": "Globo con el score de analogía",
 
   // ---- onboarding
@@ -307,6 +309,8 @@ const en: Record<Key, string> = {
   "loading": "Loading NASA data…",
   "loading.error": "Could not load data. Run the pipeline first (see README).",
   "aria.panel": "Controls",
+  "aria.panel.open": "Open Lumea menu",
+  "aria.panel.close": "Close Lumea menu",
   "aria.map": "Analog score globe",
 
   "onb.step": "Step {n} of 2",

@@ -58,6 +58,61 @@ let pointPop: maplibregl.Popup | null = null;
 let pointRef: PointRef | null = null;
 let pointTimer: number | undefined;
 let pointPinned = false;                     // abierta con clic/toque: no se cierra al salir del punto
+const mobilePanel = window.matchMedia("(max-width: 860px)");
+
+function setPanelOpen(open: boolean) {
+  const panel = $("#panel");
+  const handle = $<HTMLButtonElement>("#panel-toggle");
+  const content = $("#panel-scroll");
+  panel.classList.remove("dragging");
+  panel.style.removeProperty("transform");
+  panel.dataset.state = open ? "open" : "closed";
+  handle.setAttribute("aria-expanded", String(open));
+  handle.setAttribute("aria-label", t(open ? "aria.panel.close" : "aria.panel.open"));
+  content.inert = mobilePanel.matches && !open;
+}
+
+function wireMobilePanel() {
+  const panel = $("#panel");
+  const handle = $<HTMLButtonElement>("#panel-toggle");
+  let startY = 0, startOffset = 0, lastY = 0, lastTime = 0, velocity = 0, moved = false, suppressClick = false;
+  const maxOffset = () => Math.max(0, panel.getBoundingClientRect().height - handle.getBoundingClientRect().height);
+
+  handle.addEventListener("pointerdown", (e) => {
+    if (!mobilePanel.matches || !e.isPrimary) return;
+    startY = lastY = e.clientY;
+    lastTime = e.timeStamp;
+    velocity = 0; moved = false;
+    startOffset = panel.dataset.state === "closed" ? maxOffset() : 0;
+    handle.setPointerCapture(e.pointerId);
+  });
+  handle.addEventListener("pointermove", (e) => {
+    if (!mobilePanel.matches || !handle.hasPointerCapture(e.pointerId)) return;
+    const delta = e.clientY - startY;
+    if (Math.abs(delta) > 5) moved = true;
+    if (!moved) return;
+    panel.classList.add("dragging");
+    panel.style.transform = `translateY(${Math.max(0, Math.min(maxOffset(), startOffset + delta))}px)`;
+    velocity = (e.clientY - lastY) / Math.max(1, e.timeStamp - lastTime);
+    lastY = e.clientY; lastTime = e.timeStamp;
+  });
+  const settle = (e: PointerEvent) => {
+    if (!handle.hasPointerCapture(e.pointerId)) return;
+    handle.releasePointerCapture(e.pointerId);
+    if (!moved) return;
+    suppressClick = true;
+    const offset = Math.max(0, Math.min(maxOffset(), startOffset + e.clientY - startY));
+    setPanelOpen(Math.abs(velocity) > .35 ? velocity < 0 : offset < maxOffset() / 2);
+  };
+  handle.addEventListener("pointerup", settle);
+  handle.addEventListener("pointercancel", settle);
+  handle.addEventListener("click", () => {
+    if (suppressClick) { suppressClick = false; return; }
+    if (mobilePanel.matches) setPanelOpen(panel.dataset.state === "closed");
+  });
+  mobilePanel.addEventListener("change", () => setPanelOpen(true));
+  setPanelOpen(true);
+}
 // capa USGS ya filtrada por scripts/build-usgs.mjs (data/usgs.json)
 interface UsgsSite { name: string; type: string; lat: number; lon: number; body: string | null; reason: "tagged" | "environment" }
 interface UsgsMatch { known: string; usgs: string; lat: number; lon: number; km: number }
@@ -175,6 +230,7 @@ function changeLang(l: Lang) {
   q.set("lang", l);
   history.replaceState(null, "", `?${q.toString()}${location.hash}`);
   applyStatic();
+  setPanelOpen($("#panel").dataset.state !== "closed");
   if (!ds || !state.d) return;
   renderAll();
   closePoint();
@@ -521,6 +577,11 @@ function renderCard(c: number) {
       <h4 class="never">${esc(t("card.never"))}</h4>
       ${tg.never_analog.map((f) => `<div class="row"><span>${esc(td(f.k))} ${badge("N", "N", t("comp.N"))}</span><span class="why">${esc(td(f.v))} ${srcLink(f.src)}</span></div>`).join("")}
     </details>`;
+  const scroller = document.createElement("div");
+  scroller.className = "card-scroll";
+  card.append(scroller);
+  [...card.children].filter((child) => child !== scroller && !child.classList.contains("close"))
+    .forEach((child) => scroller.append(child));
   card.querySelector(".close")!.addEventListener("click", () => {
     card.hidden = true; state.selected = -1; if (mapReady) map.setFilter("sel", ["==", ["id"], -1]);
   });
@@ -605,11 +666,12 @@ function pointHtml(p: PointInfo): string {
 function showPoint(ref: PointRef, pinned = false) {
   window.clearTimeout(pointTimer);
   if (pinned) pointPinned = true;
+  const p = pointInfo(ref);
+  if (pinned && p.photo && mobilePanel.matches) setPanelOpen(false);
   if (pointRef && pointRef.kind === ref.kind && pointRef.id === ref.id && pointPop?.isOpen()) return;
   closePoint();
   pointPinned = pinned;
   pointRef = ref;
-  const p = pointInfo(ref);
   pointPop = new maplibregl.Popup({ offset: 14, closeButton: false, closeOnClick: false, maxWidth: "304px", className: "point-pop" })
     .setLngLat([p.lon, p.lat]).setHTML(pointHtml(p)).addTo(map);
   const el = pointPop.getElement();
@@ -809,7 +871,7 @@ function buildMap() {
     const refOf = (f: maplibregl.MapGeoJSONFeature): PointRef | null => typeof f.id !== "number" ? null
       : { kind: f.layer.id === "sites" ? "site" : f.layer.id === "usgs" ? "usgs" : "cand", id: f.id };
     for (const layer of POINT_LAYERS) {
-      map.on("mousemove", layer, (e) => { const r = e.features?.[0] ? refOf(e.features[0]) : null; if (r) showPoint(r); });
+      map.on("mousemove", layer, (e) => { const r = e.features?.[0] ? refOf(e.features[0]) : null; if (r && !mobilePanel.matches) showPoint(r); });
       map.on("mouseleave", layer, () => schedulePointClose());
     }
     for (const layer of [...POINT_LAYERS, "cells"]) {
@@ -890,6 +952,7 @@ function setMode(d: Destination, m: Mission) {
 
 // ------------------------------------------------------------------ init
 function wire() {
+  wireMobilePanel();
   $("#pick-dest").addEventListener("click", () => togglePicker("dest"));
   $("#pick-mission").addEventListener("click", () => togglePicker("mission"));
   $("#month-best").addEventListener("click", () => setMonth(-1));
