@@ -14,6 +14,7 @@ import { openOnboarding } from "./onboarding.ts";
 import { MIN_COVERAGE, haversineKm, membership, topCandidates } from "./scoring.ts";
 import type { PhotoCredit } from "./photo.ts";
 import { initTips, tip } from "./tip.ts";
+import { SUN_LIGHT_POSITION, sunlightTile } from "./sunlight.ts";
 import type { Fact, Param } from "./types.ts";
 import type { Feature, FeatureCollection } from "geojson";
 
@@ -22,13 +23,13 @@ const MIN_SHOW = PARTIAL_MIN;   // por debajo, la celda no se pinta (analogía r
 const NEW_KM = 500;
 const SITE_KM = 60;            // una celda: a esta distancia la ficha ofrece la foto del análogo documentado
 const GIBS_NATIVE_ZOOM = 8;    // resolución nativa de Blue Marble en GIBS (GoogleMapsCompatible_Level8)
-// Mapa de calor (rosado → rojo → naranja). Sale de los tokens CSS (--ramp-0..3): una sola fuente para
+// Mapa de calor (arena clara → coral → rojo vivo). Sale de los tokens CSS (--ramp-0..3): una sola fuente para
 // mapa, leyenda y calendario. De 0,30 a 0,60 (parcial) se pinta tenue; desde 0,60 (análogo), con fuerza.
 const RAMP_STOPS = [0.3, 0.6, 0.8, 1];
 const OP_PARTIAL = 0.36, OP_ANALOG = 0.88;
 // Copia de seguridad por si la hoja de estilos aún no está aplicada al leer el token.
 const TOKEN_FALLBACK: Record<string, string> = {
-  "--ramp-0": "#F06AA8", "--ramp-1": "#E11D48", "--ramp-2": "#F97316", "--ramp-3": "#FFC56B",
+  "--ramp-0": "#FFE1B5", "--ramp-1": "#FFAD78", "--ramp-2": "#FA684B", "--ramp-3": "#F52E3E",
   "--navy-950": "#000000", "--navy-900": "#06080E", "--amber-400": "#F0A23B", "--sky-400": "#5BC0DE", "--sand-50": "#FFF6E5",
   "--sand-200": "#F4D6B0", "--amber-600": "#D97706",
 };
@@ -732,6 +733,11 @@ function renderContinents() {
 }
 
 function buildMap() {
+  maplibregl.addProtocol("lumea-sunlight", async ({ url }, controller) => {
+    const match = /^lumea-sunlight:\/\/(\d+)\/(\d+)\/(\d+)$/.exec(url);
+    if (!match) throw new Error("Invalid sunlight tile");
+    return { data: await sunlightTile(Number(match[1]), Number(match[2]), Number(match[3]), controller.signal) };
+  });
   map = new maplibregl.Map({
     container: "map",
     style: {
@@ -742,15 +748,25 @@ function buildMap() {
         // En pantallas de alta densidad se piden teselas un nivel más finas para que no se vea borrosa.
         gibs: { type: "raster", tiles: [GIBS], tileSize: window.devicePixelRatio > 1 ? 128 : 256, maxzoom: GIBS_NATIVE_ZOOM,
           attribution: "<a href='https://earthdata.nasa.gov/gibs'>NASA GIBS</a> · Blue Marble · <a href='https://www.naturalearthdata.com/'>Natural Earth</a>" },
+        sunlight: { type: "raster", tiles: ["lumea-sunlight://{z}/{x}/{y}"], tileSize: 128, maxzoom: 3 },
       },
       layers: [
         { id: "bg", type: "background", paint: { "background-color": "#02040A" } },
         // color natural de Blue Marble (antes se apagaba): la Tierra se ve como una foto, no como un dibujo
-        { id: "gibs", type: "raster", source: "gibs", paint: { "raster-saturation": -0.12, "raster-brightness-max": 0.94, "raster-contrast": 0.12 } },
+        { id: "gibs", type: "raster", source: "gibs", paint: { "raster-saturation": -0.04, "raster-brightness-max": 0.98, "raster-contrast": 0.06 } },
+        // El sombreado se proyecta sobre la Tierra, debajo de los datos para preservar sus colores.
+        { id: "sunlight", type: "raster", source: "sunlight", maxzoom: 6, paint: {
+          "raster-opacity": ["interpolate", ["linear"], ["zoom"], 0, 1, 3, 0.85, 5, 0.2, 6, 0],
+          "raster-fade-duration": 0,
+        } },
       ],
-      // halo de atmósfera alrededor del globo; se desvanece al acercarse
-      sky: { "atmosphere-blend": ["interpolate", ["linear"], ["zoom"], 0, 1, 4.5, 1, 7, 0] },
-      light: { anchor: "map", position: [1.5, 90, 80] },
+      // Dispersión tenue: el halo acompaña la luz sin cubrir la superficie de blanco.
+      sky: {
+        "sky-color": "#06101F", "horizon-color": "#739AB5", "fog-color": "#182B40",
+        "sky-horizon-blend": 0.15,
+        "atmosphere-blend": ["interpolate", ["linear"], ["zoom"], 0, 0.28, 2, 0.24, 4, 0.1, 6, 0],
+      },
+      light: { anchor: "map", position: SUN_LIGHT_POSITION },
     },
     // en pantallas estrechas el globo entero debe caber para ver resultados sin mover el mapa
     center: [15, 55], zoom: window.innerWidth < 860 ? 0.6 : 1.6,

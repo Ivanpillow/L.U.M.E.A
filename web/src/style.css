@@ -38,11 +38,11 @@
   --ok: #5FD6A2;
   --partial: #F7C948;
   --broken: #FF8E85;
-  /* mapa de calor (score 0,30 → 1): rosado = parcial, rojo → naranja → naranja claro = análogo */
-  --ramp-0: #F06AA8;
-  --ramp-1: #E11D48;
-  --ramp-2: #F97316;
-  --ramp-3: #FFC56B;
+  /* mapa de calor (score 0,30 → 1): claro = menor analogía; rojo vivo = mayor analogía */
+  --ramp-0: #FFE1B5;
+  --ramp-1: #FFAD78;
+  --ramp-2: #FA684B;
+  --ramp-3: #F52E3E;
   /* tipografía */
   --font-display: "Sora", "Segoe UI", system-ui, sans-serif;
   --font-text: "IBM Plex Sans", "Segoe UI", system-ui, sans-serif;
@@ -503,7 +503,7 @@ body:has(dialog.onb[open]) .loading:not(.mini) { color: transparent; }
 .how b { color: var(--text); font-weight: 600; }
 .sw { display: grid; place-items: center; width: 24px; height: 12px; margin-top: 4px; border-radius: 3px; color: var(--sky-400); }
 .sw.cell { width: 12px; justify-self: center; background: var(--ramp-2); box-shadow: 0 0 0 1px rgba(255, 255, 255, .3); }
-.sw.grad { background: linear-gradient(90deg, rgba(240, 106, 168, .5), var(--ramp-1) 45%, var(--ramp-2) 75%, var(--ramp-3)); }
+.sw.grad { background: linear-gradient(90deg, var(--ramp-0), var(--ramp-1) 42.86%, var(--ramp-2) 71.43%, var(--ramp-3)); }
 .sw.ui { height: 16px; margin-top: 2px; }
 .what .sub { margin: 0 0 6px; font: 600 var(--fs-xs)/1.3 var(--font-text); color: var(--muted); }
 
